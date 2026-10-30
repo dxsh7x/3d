@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SolidLab - dxsh</title>
+    <!-- Default favicon -->
+<link rel="icon" type="image/png" href="daksh.png">
+<!-- Light mode favicon -->
+<link rel="icon" type="image/png" href="black.png" media="(prefers-color-scheme: light)">
+<!-- Dark mode favicon -->
+<link rel="icon" type="image/png" href="white.png" media="(prefers-color-scheme: dark)">
+</head>
+
+<!-- External libraries -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+<style>
+    body { font-family: 'Inter', system-ui, sans-serif; user-select: none; }
+    .no-select { -webkit-touch-callout: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; }
+    /* Touch friendly scrollbars */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: #1f2937; }
+    ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+    .smartboard-btn { touch-action: manipulation; }
+    canvas { touch-action: none; }
+</style>
+</head>
+<body class="bg-gray-900 text-white overflow-hidden h-screen w-screen flex flex-col">
+
+    <!-- Top Navigation & NCERT Presets Header -->
+    <header class="bg-gray-800 border-b border-gray-700 px-4 py-2 flex items-center justify-between z-20 shrink-0">
+        <div class="flex items-center space-x-3">
+            <div class="bg-indigo-600 text-white font-bold p-2 rounded-lg flex items-center gap-2">
+                <i class="fa-solid fa-cubes text-xl"></i>
+                <span class="text-lg">SolidLab</span>
+            </div>
+            <span class="text-gray-400 text-sm hidden md:inline">Surface Areas & Volumes Studio</span>
+        </div>
+
+        <!-- Preset Selector for Quick Teaching -->
+        <div class="flex items-center space-x-2">
+            <label class="text-sm font-medium text-gray-300 hidden lg:inline"><i class="fa-solid fa-bookmark text-yellow-400 mr-1"></i> NCERT Example:</label>
+            <select id="ncertPresetSelect" class="bg-gray-700 border border-gray-600 text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 max-w-[280px]">
+                <option value="custom">-- Select Combined Solid --</option>
+                <option value="toy">1. Toy (Cone on Hemisphere)</option>
+                <option value="vessel">2. Vessel (Hemisphere on Cylinder)</option>
+                <option value="gulab_jamun">3. Gulab Jamun (Cylinder + 2 Hemispheres)</option>
+                <option value="pen_stand">4. Pen Stand (Cuboid with Conical Depressions)</option>
+                <option value="cuboid_dome">5. Decorative Block (Hemisphere on Cube)</option>
+                <option value="tent">6. Circus Tent (Cone on Cylinder)</option>
+                <option disabled>--- Standalone Solids ---</option>
+                <option value="cylinder">Cylinder</option>
+                <option value="cone">Cone</option>
+                <option value="hemisphere">Hemisphere</option>
+                <option value="sphere">Sphere</option>
+                <option value="cuboid">Cube / Cuboid</option>
+            </select>
+            <button id="btnResetView" class="bg-gray-700 hover:bg-gray-600 text-white px-3 py-2 rounded-lg text-sm smartboard-btn flex items-center gap-1">
+                <i class="fa-solid fa-rotate-left"></i> <span class="hidden sm:inline">Reset Camera</span>
+            </button>
+            <button id="btnFullscreen" class="bg-indigo-700 hover:bg-indigo-600 text-white px-3 py-2 rounded-lg text-sm smartboard-btn">
+                <i class="fa-solid fa-expand"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Workspace (Split View: 3D Viewport Left | Canvas & Formula Right) -->
+    <div class="flex-1 flex flex-col md:flex-row overflow-hidden relative">
+
+        <!-- LEFT PANE: 3D Scene Viewport -->
+        <div class="relative w-full md:w-1/2 h-1/2 md:h-full bg-black flex-1 border-r border-gray-800">
+            <!-- Three.js Canvas Container -->
+            <div id="canvas3dContainer" class="w-full h-full cursor-grab"></div>
+
+            <!-- Smartboard Floating 3D Control Bar -->
+            <div class="absolute top-3 left-3 flex flex-wrap gap-2 z-10 bg-gray-800/90 backdrop-blur border border-gray-700 p-2 rounded-xl shadow-lg">
+                <button id="toggleWireframe" class="bg-gray-700 hover:bg-gray-600 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 smartboard-btn">
+                    <i class="fa-solid fa-border-all text-indigo-400"></i> Wireframe
+                </button>
+                <button id="toggleXray" class="bg-gray-700 hover:bg-gray-600 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 smartboard-btn">
+                    <i class="fa-solid fa-eye text-emerald-400"></i> X-Ray / Transparent
+                </button>
+                <button id="toggleExplode" class="bg-gray-700 hover:bg-gray-600 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 smartboard-btn">
+                    <i class="fa-solid fa-arrows-split-up-and-left text-yellow-400"></i> Separate / Explode
+                </button>
+            </div>
+
+            <!-- Individual Face / Component Color Customization Box -->
+            <div id="colorPickerBox" class="absolute bottom-3 left-3 z-10 bg-gray-800/90 backdrop-blur border border-gray-700 p-3 rounded-xl shadow-lg max-w-xs text-xs">
+                <div class="font-bold mb-2 text-indigo-300 flex justify-between items-center">
+                    <span><i class="fa-solid fa-palette mr-1"></i> Part Colors</span>
+                    <!--<span class="text-[10px] text-gray-400">Tap to paint</span>-->
+                </div>
+                <div id="partColorPickers" class="space-y-2 max-h-36 overflow-y-auto pr-1">
+                    <!-- Dynamically injected color pickers for parts (e.g. Cone Top, Hemisphere Base) -->
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT PANE: Dual Tab (Calculations & Digital Whiteboard Overlay) -->
+        <div class="w-full md:w-1/2 h-1/2 md:h-full bg-gray-900 flex flex-col relative">
+
+            <!-- Tab Headers -->
+            <div class="flex border-b border-gray-800 bg-gray-850 shrink-0">
+                <button id="tabMathBtn" class="flex-1 py-3 text-center text-sm font-bold border-b-2 border-indigo-500 text-indigo-400 bg-gray-800 flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-calculator"></i> NCERT Formula & Calculations
+                </button>
+                <button id="tabNotesBtn" class="flex-1 py-3 text-center text-sm font-bold text-gray-400 border-b-2 border-transparent hover:text-white flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-pen-to-square"></i> Smartboard Canvas / Notes
+                </button>
+            </div>
+
+            <!-- TAB 1: Math Calculator & Dimension Sliders -->
+            <div id="tabMath" class="flex-1 overflow-y-auto p-4 space-y-4">
+                <!-- Dimensions Control Card -->
+                <div class="bg-gray-800 rounded-xl p-4 border border-gray-700 shadow-md">
+                    <h3 class="text-sm font-semibold text-gray-300 mb-3 flex justify-between items-center">
+                        <span><i class="fa-solid fa-sliders text-indigo-400 mr-2"></i> Adjust Geometry Dimensions</span>
+                        <span id="unitDisplay" class="text-xs bg-indigo-900/60 text-indigo-300 px-2 py-0.5 rounded">Unit: cm</span>
+                    </h3>
+                    <div id="slidersContainer" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <!-- Dynamic sliders generated based on active shape -->
+                    </div>
+                </div>
+
+                <!-- NCERT Math Breakdown Panel -->
+                <div class="bg-gray-800 rounded-xl p-4 border border-gray-700 shadow-md">
+                    <div class="border-b border-gray-700 pb-2 mb-3 flex items-center justify-between">
+                        <h3 class="text-md font-bold text-yellow-400 flex items-center gap-2">
+                            <i class="fa-solid fa-lightbulb"></i> Step-By-Step Solution Concept
+                        </h3>
+                        <span class="text-xs bg-emerald-900/60 text-emerald-300 px-2 py-1 rounded-full font-mono">Class 10 Method</span>
+                    </div>
+
+                    <!-- Exclusion / Surface Area Logic Explanation -->
+                    <div id="teachingTip" class="bg-indigo-950/70 border border-indigo-800/80 rounded-lg p-3 text-xs text-indigo-200 mb-3">
+                        <p class="font-semibold text-yellow-300 mb-1"><i class="fa-solid fa-circle-info"></i> Key Teacher Concept Notice:</p>
+                        <p id="tipText">When joining solids, the overlapping contact base areas are hidden/covered and MUST BE EXCLUDED when calculating Total Surface Area!</p>
+                    </div>
+
+                    <!-- Formulas Output -->
+                    <div class="space-y-3 text-sm">
+                        <!-- TSA Formula Breakdown -->
+                        <div class="bg-gray-900 p-3 rounded-lg border border-gray-700">
+                            <div class="text-xs text-gray-400 font-semibold uppercase tracking-wider mb-1">Total Surface Area (TSA) Formula</div>
+                            <div id="tsaFormula" class="text-indigo-300 font-medium overflow-x-auto py-1"></div>
+                            <div id="tsaCalc" class="text-emerald-400 font-mono text-sm mt-1"></div>
+                        </div>
+
+                        <!-- Volume Formula Breakdown -->
+                        <div class="bg-gray-900 p-3 rounded-lg border border-gray-700">
+                            <div class="text-xs text-gray-400 font-semibold uppercase tracking-wider mb-1">Total Volume (V) Formula</div>
+                            <div id="volFormula" class="text-indigo-300 font-medium overflow-x-auto py-1"></div>
+                            <div id="volCalc" class="text-emerald-400 font-mono text-sm mt-1"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: Full Smartboard Annotation Canvas Overlay -->
+            <div id="tabNotes" class="hidden flex-1 flex-col h-full bg-gray-950 relative overflow-hidden">
+                <!-- Digital Canvas for drawing -->
+                <canvas id="smartboardCanvas" class="w-full h-full absolute inset-0 z-10 cursor-crosshair"></canvas>
+
+                <!-- Floating Note Toolbar (Designed for big touch targets on smartboard) -->
+                <div class="absolute top-3 left-1/2 -translate-x-1/2 z-20 bg-gray-800 border border-gray-700 p-2 rounded-2xl shadow-2xl flex items-center space-x-2">
+                    <!-- Pen Tools -->
+                    <button id="toolPen" class="bg-indigo-600 text-white p-2.5 rounded-xl text-lg w-11 h-11 flex items-center justify-center smartboard-btn shadow">
+                        <i class="fa-solid fa-pen"></i>
+                    </button>
+                    <button id="toolHighlighter" class="bg-gray-700 text-yellow-300 hover:bg-gray-600 p-2.5 rounded-xl text-lg w-11 h-11 flex items-center justify-center smartboard-btn">
+                        <i class="fa-solid fa-highlighter"></i>
+                    </button>
+                    <button id="toolEraser" class="bg-gray-700 text-white hover:bg-gray-600 p-2.5 rounded-xl text-lg w-11 h-11 flex items-center justify-center smartboard-btn">
+                        <i class="fa-solid fa-eraser"></i>
+                    </button>
+
+                    <div class="h-6 w-px bg-gray-700"></div>
+
+                    <!-- Colors -->
+                    <div class="flex items-center space-x-1.5">
+                        <button data-color="#ef4444" class="color-btn w-8 h-8 rounded-full bg-red-500 border-2 border-white/20 active:scale-110"></button>
+                        <button data-color="#f59e0b" class="color-btn w-8 h-8 rounded-full bg-amber-500 border-2 border-white/20 active:scale-110"></button>
+                        <button data-color="#10b981" class="color-btn w-8 h-8 rounded-full bg-emerald-500 border-2 border-white/20 active:scale-110"></button>
+                        <button data-color="#3b82f6" class="color-btn w-8 h-8 rounded-full bg-blue-500 border-2 border-white border-2 active:scale-110"></button>
+                        <button data-color="#ffffff" class="color-btn w-8 h-8 rounded-full bg-white border-2 border-white/20 active:scale-110"></button>
+                    </div>
+
+                    <div class="h-6 w-px bg-gray-700"></div>
+
+                    <!-- Stroke Thickness -->
+                    <select id="penSize" class="bg-gray-700 text-white text-xs rounded-lg px-2 py-2">
+                        <option value="3">Thin Pen</option>
+                        <option value="6" selected>Medium</option>
+                        <option value="12">Thick Marker</option>
+                    </select>
+
+                    <button id="btnClearCanvas" class="bg-red-600/80 hover:bg-red-600 text-white px-3 py-2 rounded-xl text-xs font-semibold smartboard-btn flex items-center gap-1">
+                        <i class="fa-solid fa-trash"></i> Clear
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Application Scripting (Three.js 3D engine, NCERT Geometry Math, Canvas Annotations) -->
+    <script>
+        // --- GLOBAL STATE & VARIABLES ---
+        let scene, camera, renderer, controls;
+        let currentShapeGroup = new THREE.Group();
+        let activeModelKey = 'toy'; // Default NCERT Example: Toy (Cone on Hemisphere)
+        
+        // Dynamic Parameters
+        let shapeParams = {
+            radius: 3,
+            radius2: 3, // For secondary shape if different
+            height: 6,
+            height2: 4,
+            length: 8,
+            width: 6,
+            depth: 4,
+            explodeOffset: 0,
+            isExploded: false,
+            isWireframe: false,
+            isXray: false
+        };
+
+        // Material palette for shape components
+        const materialPalette = [
+            0x3b82f6, // Blue
+            0xef4444, // Red
+            0x10b981, // Emerald
+            0xf59e0b, // Amber
+            0x8b5cf6, // Purple
+            0xec4899  // Pink
+        ];
+
+        // Part mesh references for dynamic recoloring
+        let shapePartsMap = {};
+
+        // --- THREE.JS INITIALIZATION ---
+        function init3D() {
+            const container = document.getElementById('canvas3dContainer');
+            
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x0f172a); // Deep Navy background
+
+            // Camera setup
+            camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+            camera.position.set(12, 12, 16);
+
+            // Renderer setup
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            container.appendChild(renderer.domElement);
+
+            // Orbit Controls optimized for touch smartboards
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.rotateSpeed = 0.8;
+            controls.touchAction = 'none';
+
+            // Lighting Setup
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+            scene.add(ambientLight);
+
+            const dirLight1 = new THREE.DirectionalLight(0xffffff, 0.8);
+            dirLight1.position.set(10, 20, 15);
+            scene.add(dirLight1);
+
+            const dirLight2 = new THREE.DirectionalLight(0x818cf8, 0.4);
+            dirLight2.position.set(-10, -10, -10);
+            scene.add(dirLight2);
+
+            // Grid & Axes Helper for spatial reference
+            const gridHelper = new THREE.GridHelper(30, 30, 0x475569, 0x1e293b);
+            gridHelper.position.y = -5;
+            scene.add(gridHelper);
+
+            scene.add(currentShapeGroup);
+
+            // Window resize handler
+            window.addEventListener('resize', onWindowResize);
+
+            // Initial render call
+            loadPresetModel(activeModelKey);
+            animate();
+        }
+
+        function onWindowResize() {
+            const container = document.getElementById('canvas3dContainer');
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            resizeSmartboardCanvas();
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        // --- MESH BUILDERS FOR NCERT COMBINED SHAPES ---
+        function clearCurrentShape() {
+            while (currentShapeGroup.children.length > 0) {
+                const obj = currentShapeGroup.children[0];
+                if (obj.geometry) obj.geometry.dispose();
+                if (obj.material) {
+                    if (Array.isArray(obj.material)) obj.material.forEach(m => m.dispose());
+                    else obj.material.dispose();
+                }
+                currentShapeGroup.remove(obj);
+            }
+            shapePartsMap = {};
+        }
+
+        function createStandardMaterial(colorHex, opacity = 1.0) {
+            return new THREE.MeshStandardMaterial({
+                color: colorHex,
+                roughness: 0.3,
+                metalness: 0.1,
+                wireframe: shapeParams.isWireframe,
+                transparent: shapeParams.isXray || opacity < 1.0,
+                opacity: shapeParams.isXray ? 0.4 : opacity,
+                side: THREE.DoubleSide
+            });
+        }
+
+        function buildShapeGeometry() {
+            clearCurrentShape();
+            const offset = shapeParams.isExploded ? 2.0 : 0;
+            const r = shapeParams.radius;
+            const h = shapeParams.height;
+
+            switch (activeModelKey) {
+                case 'toy': { // Cone mounted on a Hemisphere
+                    // Hemisphere Base
+                    const hemiGeo = new THREE.SphereGeometry(r, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2);
+                    const hemiMat = createStandardMaterial(materialPalette[0]);
+                    const hemiMesh = new THREE.Mesh(hemiGeo, hemiMat);
+                    hemiMesh.rotation.x = Math.PI; // Point hemispherical curve downwards
+                    hemiMesh.position.y = -offset;
+
+                    // Cone Top
+                    const coneGeo = new THREE.ConeGeometry(r, h, 32);
+                    const coneMat = createStandardMaterial(materialPalette[1]);
+                    const coneMesh = new THREE.Mesh(coneGeo, coneMat);
+                    coneMesh.position.y = h / 2 + offset;
+
+                    currentShapeGroup.add(hemiMesh);
+                    currentShapeGroup.add(coneMesh);
+
+                    shapePartsMap['Hemisphere Base'] = hemiMesh;
+                    shapePartsMap['Top Cone'] = coneMesh;
+                    break;
+                }
+
+                case 'vessel': { // Hemisphere mounted on Hollow Cylinder
+                    // Cylinder Body
+                    const cylGeo = new THREE.CylinderGeometry(r, r, h, 32, 1, true); // open ended
+                    const cylMat = createStandardMaterial(materialPalette[0]);
+                    const cylMesh = new THREE.Mesh(cylGeo, cylMat);
+
+                    // Hemisphere Bottom
+                    const hemiGeo = new THREE.SphereGeometry(r, 32, 16, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2);
+                    const hemiMat = createStandardMaterial(materialPalette[3]);
+                    const hemiMesh = new THREE.Mesh(hemiGeo, hemiMat);
+                    hemiMesh.position.y = -h / 2 - offset;
+
+                    currentShapeGroup.add(cylMesh);
+                    currentShapeGroup.add(hemiMesh);
+
+                    shapePartsMap['Cylinder Wall'] = cylMesh;
+                    shapePartsMap['Bottom Hemisphere'] = hemiMesh;
+                    break;
+                }
+
+                case 'gulab_jamun': { // Cylinder with 2 Hemispherical Ends
+                    // Central Cylinder
+                    const cylGeo = new THREE.CylinderGeometry(r, r, h, 32);
+                    const cylMat = createStandardMaterial(materialPalette[0]);
+                    const cylMesh = new THREE.Mesh(cylGeo, cylMat);
+
+                    // Top Hemisphere
+                    const topHemiGeo = new THREE.SphereGeometry(r, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2);
+                    const topHemiMat = createStandardMaterial(materialPalette[1]);
+                    const topHemiMesh = new THREE.Mesh(topHemiGeo, topHemiMat);
+                    topHemiMesh.position.y = h / 2 + offset;
+
+                    // Bottom Hemisphere
+                    const botHemiGeo = new THREE.SphereGeometry(r, 32, 16, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2);
+                    const botHemiMat = createStandardMaterial(materialPalette[2]);
+                    const botHemiMesh = new THREE.Mesh(botHemiGeo, botHemiMat);
+                    botHemiMesh.position.y = -h / 2 - offset;
+
+                    currentShapeGroup.add(cylMesh);
+                    currentShapeGroup.add(topHemiMesh);
+                    currentShapeGroup.add(botHemiMesh);
+
+                    shapePartsMap['Cylinder Center'] = cylMesh;
+                    shapePartsMap['Top Cap'] = topHemiMesh;
+                    shapePartsMap['Bottom Cap'] = botHemiMesh;
+                    break;
+                }
+
+                case 'cuboid_dome': { // Block/Cube with Hemisphere on Top
+                    const l = shapeParams.length;
+                    const w = shapeParams.width;
+                    const d = shapeParams.depth;
+
+                    // Cuboid Base
+                    const boxGeo = new THREE.BoxGeometry(l, d, w);
+                    const boxMat = createStandardMaterial(materialPalette[0]);
+                    const boxMesh = new THREE.Mesh(boxGeo, boxMat);
+
+                    // Top Hemisphere Dome
+                    const domeGeo = new THREE.SphereGeometry(r, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2);
+                    const domeMat = createStandardMaterial(materialPalette[4]);
+                    const domeMesh = new THREE.Mesh(domeGeo, domeMat);
+                    domeMesh.position.y = d / 2 + offset;
+
+                    currentShapeGroup.add(boxMesh);
+                    currentShapeGroup.add(domeMesh);
+
+                    shapePartsMap['Cuboid Base'] = boxMesh;
+                    shapePartsMap['Dome Hemisphere'] = domeMesh;
+                    break;
+                }
+
+                case 'pen_stand': { // Cuboid with Conical Depressions
+                    const l = shapeParams.length;
+                    const w = shapeParams.width;
+                    const d = shapeParams.depth;
+
+                    // Main Cuboid Block
+                    const boxGeo = new THREE.BoxGeometry(l, d, w);
+                    const boxMat = createStandardMaterial(materialPalette[0], 0.85);
+                    const boxMesh = new THREE.Mesh(boxGeo, boxMat);
+                    currentShapeGroup.add(boxMesh);
+                    shapePartsMap['Wood Block'] = boxMesh;
+
+                    // 2 Conical Depressions (represented visual inner cones)
+                    const coneGeo = new THREE.ConeGeometry(r, h, 32);
+                    const coneMat = createStandardMaterial(materialPalette[1]);
+
+                    const cone1 = new THREE.Mesh(coneGeo, coneMat);
+                    cone1.rotation.x = Math.PI; // point downwards inside
+                    cone1.position.set(-l/4, d/2 - h/2 + offset, 0);
+
+                    const cone2 = new THREE.Mesh(coneGeo, coneMat);
+                    cone2.rotation.x = Math.PI;
+                    cone2.position.set(l/4, d/2 - h/2 + offset, 0);
+
+                    currentShapeGroup.add(cone1);
+                    currentShapeGroup.add(cone2);
+
+                    shapePartsMap['Conical Cavity 1'] = cone1;
+                    shapePartsMap['Conical Cavity 2'] = cone2;
+                    break;
+                }
+
+                case 'tent': { // Cone on Cylinder
+                    const cylGeo = new THREE.CylinderGeometry(r, r, h, 32);
+                    const cylMat = createStandardMaterial(materialPalette[0]);
+                    const cylMesh = new THREE.Mesh(cylGeo, cylMat);
+
+                    const coneGeo = new THREE.ConeGeometry(r, shapeParams.height2, 32);
+                    const coneMat = createStandardMaterial(materialPalette[3]);
+                    const coneMesh = new THREE.Mesh(coneGeo, coneMat);
+                    coneMesh.position.y = h/2 + shapeParams.height2/2 + offset;
+
+                    currentShapeGroup.add(cylMesh);
+                    currentShapeGroup.add(coneMesh);
+
+                    shapePartsMap['Cylinder Base'] = cylMesh;
+                    shapePartsMap['Conical Roof'] = coneMesh;
+                    break;
+                }
+
+                // Standalone shapes
+                case 'cylinder': {
+                    const geo = new THREE.CylinderGeometry(r, r, h, 32);
+                    const mat = createStandardMaterial(materialPalette[0]);
+                    const mesh = new THREE.Mesh(geo, mat);
+                    currentShapeGroup.add(mesh);
+                    shapePartsMap['Cylinder'] = mesh;
+                    break;
+                }
+                case 'cone': {
+                    const geo = new THREE.ConeGeometry(r, h, 32);
+                    const mat = createStandardMaterial(materialPalette[1]);
+                    const mesh = new THREE.Mesh(geo, mat);
+                    currentShapeGroup.add(mesh);
+                    shapePartsMap['Cone'] = mesh;
+                    break;
+                }
+                case 'hemisphere': {
+                    const geo = new THREE.SphereGeometry(r, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2);
+                    const mat = createStandardMaterial(materialPalette[2]);
+                    const mesh = new THREE.Mesh(geo, mat);
+                    currentShapeGroup.add(mesh);
+                    shapePartsMap['Hemisphere'] = mesh;
+                    break;
+                }
+                case 'sphere': {
+                    const geo = new THREE.SphereGeometry(r, 32, 32);
+                    const mat = createStandardMaterial(materialPalette[4]);
+                    const mesh = new THREE.Mesh(geo, mat);
+                    currentShapeGroup.add(mesh);
+                    shapePartsMap['Sphere'] = mesh;
+                    break;
+                }
+                case 'cuboid': {
+                    const geo = new THREE.BoxGeometry(shapeParams.length, shapeParams.depth, shapeParams.width);
+                    const mat = createStandardMaterial(materialPalette[5]);
+                    const mesh = new THREE.Mesh(geo, mat);
+                    currentShapeGroup.add(mesh);
+                    shapePartsMap['Cuboid'] = mesh;
+                    break;
+                }
+            }
+
+            renderColorPickersUI();
+            updateCalculationsAndSliders();
+        }
+
+        // --- UI COLOR PICKER INJECTION ---
+        function renderColorPickersUI() {
+            const container = document.getElementById('partColorPickers');
+            container.innerHTML = '';
+
+            Object.keys(shapePartsMap).forEach((partName, idx) => {
+                const mesh = shapePartsMap[partName];
+                const hexColor = '#' + mesh.material.color.getHexString();
+
+                const item = document.createElement('div');
+                item.className = "flex items-center justify-between bg-gray-700/60 p-1.5 rounded-lg";
+                item.innerHTML = `
+                    <span class="text-gray-200 font-medium">${partName}</span>
+                    <input type="color" value="${hexColor}" data-part="${partName}" class="w-7 h-7 rounded border-0 cursor-pointer bg-transparent">
+                `;
+                container.appendChild(item);
+
+                // Listener for real-time color change
+                item.querySelector('input').addEventListener('input', (e) => {
+                    shapePartsMap[partName].material.color.set(e.target.value);
+                });
+            });
+        }
+
+        // --- SLIDERS & MATH FORMULA ENGINE ---
+        function updateCalculationsAndSliders() {
+            const container = document.getElementById('slidersContainer');
+            
+            // Build dynamic sliders HTML if model changed
+            if (container.dataset.activeModel !== activeModelKey) {
+                container.dataset.activeModel = activeModelKey;
+                container.innerHTML = '';
+
+                if (['toy', 'vessel', 'gulab_jamun', 'cylinder', 'cone', 'hemisphere', 'sphere'].includes(activeModelKey)) {
+                    container.innerHTML += createSliderHTML('radius', 'Radius (r)', shapeParams.radius, 1, 8, 0.5);
+                }
+                if (['toy', 'vessel', 'gulab_jamun', 'cylinder', 'cone', 'pen_stand'].includes(activeModelKey)) {
+                    container.innerHTML += createSliderHTML('height', 'Height (h)', shapeParams.height, 2, 12, 0.5);
+                }
+                if (activeModelKey === 'tent') {
+                    container.innerHTML += createSliderHTML('radius', 'Radius (r)', shapeParams.radius, 1, 8, 0.5);
+                    container.innerHTML += createSliderHTML('height', 'Cylinder Height (h1)', shapeParams.height, 2, 10, 0.5);
+                    container.innerHTML += createSliderHTML('height2', 'Cone Height (h2)', shapeParams.height2, 1, 8, 0.5);
+                }
+                if (['cuboid_dome', 'pen_stand', 'cuboid'].includes(activeModelKey)) {
+                    container.innerHTML += createSliderHTML('length', 'Length (l)', shapeParams.length, 3, 12, 0.5);
+                    container.innerHTML += createSliderHTML('width', 'Width (w)', shapeParams.width, 3, 12, 0.5);
+                    container.innerHTML += createSliderHTML('depth', 'Height (h)', shapeParams.depth, 2, 10, 0.5);
+                    if (['cuboid_dome', 'pen_stand'].includes(activeModelKey)) {
+                        container.innerHTML += createSliderHTML('radius', 'Cavity/Dome Radius (r)', shapeParams.radius, 0.5, 3, 0.2);
+                    }
+                }
+
+                // Bind slider events
+                container.querySelectorAll('input[type="range"]').forEach(input => {
+                    input.addEventListener('input', (e) => {
+                        const param = e.target.dataset.param;
+                        shapeParams[param] = parseFloat(e.target.value);
+                        document.getElementById(`val_${param}`).innerText = e.target.value;
+                        buildShapeGeometry();
+                    });
+                });
+            }
+
+            // Calculate Formulas & Solutions
+            calculateMathValues();
+        }
+
+        function createSliderHTML(paramKey, label, val, min, max, step) {
+            return `
+                <div class="space-y-1">
+                    <div class="flex justify-between text-xs font-semibold text-gray-300">
+                        <span>${label}</span>
+                        <span id="val_${paramKey}" class="text-indigo-400 font-mono">${val}</span>
+                    </div>
+                    <input type="range" data-param="${paramKey}" min="${min}" max="${max}" step="${step}" value="${val}"
+                        class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-indigo-500">
+                </div>
+            `;
+        }
+
+        function calculateMathValues() {
+            const r = shapeParams.radius;
+            const h = shapeParams.height;
+            const l = shapeParams.length;
+            const w = shapeParams.width;
+            const d = shapeParams.depth;
+
+            let tsaStr = '', volStr = '', tsaVal = 0, volVal = 0;
+            let tipText = "Notice: Overlapping contact areas are subtracted from total surface calculations!";
+
+            switch (activeModelKey) {
+                case 'toy': { // Cone on Hemisphere
+                    const slantHeight = Math.sqrt(r * r + h * h);
+                    tsaStr = `\\text{TSA} = \\text{CSA (Cone)} + \\text{CSA (Hemisphere)} = \\pi r l + 2\\pi r^2`;
+                    tsaVal = Math.PI * r * slantHeight + 2 * Math.PI * r * r;
+                    
+                    volStr = `V = \\text{Vol (Cone)} + \\text{Vol (Hemisphere)} = \\frac{1}{3}\\pi r^2 h + \\frac{2}{3}\\pi r^3`;
+                    volVal = (1/3) * Math.PI * r * r * h + (2/3) * Math.PI * Math.pow(r, 3);
+                    tipText = `Slant height l = \\sqrt{r^2 + h^2} = \\sqrt{${r}^2 + ${h}^2} = ${slantHeight.toFixed(2)} \\text{ cm}`;
+                    break;
+                }
+                case 'vessel': { // Hemisphere on Cylinder
+                    tsaStr = `\\text{TSA} = \\text{CSA (Cylinder)} + \\text{CSA (Hemisphere)} = 2\\pi r h + 2\\pi r^2`;
+                    tsaVal = 2 * Math.PI * r * h + 2 * Math.PI * r * r;
+
+                    volStr = `V = \\text{Vol (Cylinder)} + \\text{Vol (Hemisphere)} = \\pi r^2 h + \\frac{2}{3}\\pi r^3`;
+                    volVal = Math.PI * r * r * h + (2/3) * Math.PI * Math.pow(r, 3);
+                    break;
+                }
+                case 'gulab_jamun': { // Cylinder + 2 Hemispheres
+                    tsaStr = `\\text{TSA} = \\text{CSA (Cylinder)} + 2 \\times \\text{CSA (Hemisphere)} = 2\\pi r h + 4\\pi r^2`;
+                    tsaVal = 2 * Math.PI * r * h + 4 * Math.PI * r * r;
+
+                    volStr = `V = \\pi r^2 h + 2 \\times \\left(\\frac{2}{3}\\pi r^3\\right) = \\pi r^2 h + \\frac{4}{3}\\pi r^3`;
+                    volVal = Math.PI * r * r * h + (4/3) * Math.PI * Math.pow(r, 3);
+                    break;
+                }
+                case 'cuboid_dome': { // Block with Hemisphere on top
+                    tsaStr = `\\text{TSA} = \\text{TSA (Cuboid)} + \\text{CSA (Hemisphere)} - \\text{Base Area (Circle)} = 2(lw+wh+hl) + 2\\pi r^2 - \\pi r^2`;
+                    tsaVal = 2 * (l*w + w*d + d*l) + Math.PI * r * r;
+
+                    volStr = `V = \\text{Vol (Cuboid)} + \\text{Vol (Hemisphere)} = (l \\times w \\times h) + \\frac{2}{3}\\pi r^3`;
+                    volVal = (l * w * d) + (2/3) * Math.PI * Math.pow(r, 3);
+                    break;
+                }
+                case 'pen_stand': { // Cuboid minus 2 Conical Cavities
+                    tsaStr = `\\text{TSA} = \\text{TSA (Cuboid)} + 2\\times\\text{CSA (Cone)} - 2\\times\\text{Base (Circle)}`;
+                    const slantHeight = Math.sqrt(r * r + h * h);
+                    tsaVal = 2 * (l*w + w*d + d*l) + 2 * (Math.PI * r * slantHeight) - 2 * (Math.PI * r * r);
+
+                    volStr = `V = \\text{Vol (Cuboid)} - 2 \\times \\text{Vol (Cone)} = (l \\times w \\times h) - 2\\left(\\frac{1}{3}\\pi r^2 h\\right)`;
+                    volVal = (l * w * d) - 2 * ((1/3) * Math.PI * r * r * h);
+                    break;
+                }
+                default: {
+                    tsaStr = `\\text{TSA Standard Calculation}`;
+                    tsaVal = 2 * Math.PI * r * (r + h);
+                    volStr = `V = \\pi r^2 h`;
+                    volVal = Math.PI * r * r * h;
+                }
+            }
+
+            document.getElementById('tipText').innerText = tipText;
+            document.getElementById('tsaFormula').innerText = `\\[ ${tsaStr} \\]`;
+            document.getElementById('tsaCalc').innerHTML = `<b>Total Area:</b> <span class="text-xl">${tsaVal.toFixed(2)}</span> cm²`;
+
+            document.getElementById('volFormula').innerText = `\\[ ${volStr} \\]`;
+            document.getElementById('volCalc').innerHTML = `<b>Total Volume:</b> <span class="text-xl">${volVal.toFixed(2)}</span> cm³`;
+
+            // Trigger MathJax re-render if loaded
+            if (window.MathJax && MathJax.typeset) {
+                MathJax.typeset();
+            }
+        }
+
+        function loadPresetModel(modelKey) {
+            activeModelKey = modelKey;
+            buildShapeGeometry();
+            
+            // Adjust camera view
+            camera.position.set(12, 12, 16);
+            controls.reset();
+        }
+
+        // --- SMARTBOARD DIGITAL CANVAS ANNOTATION ENGINE ---
+        let isDrawing = false;
+        let activePenColor = '#3b82f6';
+        let activePenSize = 6;
+        let activeTool = 'pen'; // pen, highlighter, eraser
+        let sbCanvas, sbCtx;
+
+        function initSmartboardCanvas() {
+            sbCanvas = document.getElementById('smartboardCanvas');
+            sbCtx = sbCanvas.getContext('2d');
+            resizeSmartboardCanvas();
+
+            // Touch & Mouse Listeners for Smartboard interactiveness
+            sbCanvas.addEventListener('mousedown', startDrawing);
+            sbCanvas.addEventListener('mousemove', draw);
+            sbCanvas.addEventListener('mouseup', stopDrawing);
+            sbCanvas.addEventListener('mouseleave', stopDrawing);
+
+            sbCanvas.addEventListener('touchstart', (e) => {
+                const touch = e.touches[0];
+                const rect = sbCanvas.getBoundingClientRect();
+                startDrawing({ clientX: touch.clientX, clientY: touch.clientY });
+            }, { passive: true });
+
+            sbCanvas.addEventListener('touchmove', (e) => {
+                const touch = e.touches[0];
+                draw({ clientX: touch.clientX, clientY: touch.clientY });
+            }, { passive: true });
+
+            sbCanvas.addEventListener('touchend', stopDrawing);
+        }
+
+        function resizeSmartboardCanvas() {
+            if (!sbCanvas) return;
+            const parent = sbCanvas.parentElement;
+            sbCanvas.width = parent.clientWidth;
+            sbCanvas.height = parent.clientHeight;
+        }
+
+        function startDrawing(e) {
+            isDrawing = true;
+            const rect = sbCanvas.getBoundingClientRect();
+            sbCtx.beginPath();
+            sbCtx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
+        }
+
+        function draw(e) {
+            if (!isDrawing) return;
+            const rect = sbCanvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            sbCtx.lineCap = 'round';
+            sbCtx.lineJoin = 'round';
+
+            if (activeTool === 'eraser') {
+                sbCtx.clearRect(x - 15, y - 15, 30, 30);
+            } else {
+                sbCtx.strokeStyle = activeTool === 'highlighter' ? activePenColor + '66' : activePenColor;
+                sbCtx.lineWidth = activeTool === 'highlighter' ? activePenSize * 3 : activePenSize;
+                sbCtx.lineTo(x, y);
+                sbCtx.stroke();
+            }
+        }
+
+        function stopDrawing() {
+            if (isDrawing) {
+                sbCtx.closePath();
+                isDrawing = false;
+            }
+        }
+
+        // --- DOM CONTROLS & EVENT BINDINGS ---
+        window.onload = function() {
+            init3D();
+            initSmartboardCanvas();
+
+            // Preset selector listener
+            document.getElementById('ncertPresetSelect').addEventListener('change', (e) => {
+                if (e.target.value !== 'custom') {
+                    loadPresetModel(e.target.value);
+                }
+            });
+
+            // View Control Buttons
+            document.getElementById('toggleWireframe').addEventListener('click', () => {
+                shapeParams.isWireframe = !shapeParams.isWireframe;
+                buildShapeGeometry();
+            });
+
+            document.getElementById('toggleXray').addEventListener('click', () => {
+                shapeParams.isXray = !shapeParams.isXray;
+                buildShapeGeometry();
+            });
+
+            document.getElementById('toggleExplode').addEventListener('click', () => {
+                shapeParams.isExploded = !shapeParams.isExploded;
+                buildShapeGeometry();
+            });
+
+            document.getElementById('btnResetView').addEventListener('click', () => {
+                camera.position.set(12, 12, 16);
+                controls.reset();
+            });
+
+            // Fullscreen Toggle for Smartboard
+            document.getElementById('btnFullscreen').addEventListener('click', () => {
+                if (!document.fullscreenElement) {
+                    document.documentElement.requestFullscreen();
+                } else {
+                    if (document.exitFullscreen) document.exitFullscreen();
+                }
+            });
+
+            // Tab Switching Logic
+            const tabMathBtn = document.getElementById('tabMathBtn');
+            const tabNotesBtn = document.getElementById('tabNotesBtn');
+            const tabMath = document.getElementById('tabMath');
+            const tabNotes = document.getElementById('tabNotes');
+
+            tabMathBtn.addEventListener('click', () => {
+                tabMath.classList.remove('hidden');
+                tabNotes.classList.add('hidden');
+                tabMathBtn.className = "flex-1 py-3 text-center text-sm font-bold border-b-2 border-indigo-500 text-indigo-400 bg-gray-800 flex items-center justify-center gap-2";
+                tabNotesBtn.className = "flex-1 py-3 text-center text-sm font-bold text-gray-400 border-b-2 border-transparent hover:text-white flex items-center justify-center gap-2";
+            });
+
+            tabNotesBtn.addEventListener('click', () => {
+                tabNotes.classList.remove('hidden');
+                tabNotes.classList.add('flex');
+                tabMath.classList.add('hidden');
+                tabNotesBtn.className = "flex-1 py-3 text-center text-sm font-bold border-b-2 border-indigo-500 text-indigo-400 bg-gray-800 flex items-center justify-center gap-2";
+                tabMathBtn.className = "flex-1 py-3 text-center text-sm font-bold text-gray-400 border-b-2 border-transparent hover:text-white flex items-center justify-center gap-2";
+                resizeSmartboardCanvas();
+            });
+
+            // Smartboard Toolbar bindings
+            document.querySelectorAll('.color-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    activePenColor = e.target.dataset.color;
+                    if (activeTool === 'eraser') activeTool = 'pen';
+                });
+            });
+
+            document.getElementById('penSize').addEventListener('change', (e) => {
+                activePenSize = parseInt(e.target.value);
+            });
+
+            document.getElementById('toolPen').addEventListener('click', () => activeTool = 'pen');
+            document.getElementById('toolHighlighter').addEventListener('click', () => activeTool = 'highlighter');
+            document.getElementById('toolEraser').addEventListener('click', () => activeTool = 'eraser');
+            document.getElementById('btnClearCanvas').addEventListener('click', () => {
+                sbCtx.clearRect(0, 0, sbCanvas.width, sbCanvas.height);
+            });
+        };
+    </script>
+</body>
+</html>
