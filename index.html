@@ -1,861 +1,1263 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SolidLab - dxsh</title>
-    <!-- Default favicon -->
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style>
+<title>Solids Lab 3D - dxsh</title>
+<!-- Default favicon -->
 <link rel="icon" type="image/png" href="daksh.png">
 <!-- Light mode favicon -->
 <link rel="icon" type="image/png" href="black.png" media="(prefers-color-scheme: light)">
 <!-- Dark mode favicon -->
 <link rel="icon" type="image/png" href="white.png" media="(prefers-color-scheme: dark)">
 </head>
-
-<!-- External libraries -->
-<script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
-<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
-
+<body>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=STIX+Two+Text:ital,wght@0,500;0,700;1,500;1,700&display=swap">
 <style>
-    body { font-family: 'Inter', system-ui, sans-serif; user-select: none; }
-    .no-select { -webkit-touch-callout: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; }
-    /* Touch friendly scrollbars */
-    ::-webkit-scrollbar { width: 8px; height: 8px; }
-    ::-webkit-scrollbar-track { background: #1f2937; }
-    ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
-    ::-webkit-scrollbar-thumb:hover { background: #6b7280; }
-    .smartboard-btn { touch-action: manipulation; }
-    canvas { touch-action: none; }
+[hidden]{display:none!important}
+/* Layout: a full-screen teaching board. Big 3D stage on the left, a tabbed control panel on the right,
+   a draggable pen toolbar floating over the stage. On narrow screens the panel drops below the stage. */
+:root{
+  --bg:#e9edf5; --panel:#ffffff; --panel2:#f3f5fa; --ink:#0f1729; --muted:#566079; --line:#d9deea;
+  --accent:#3b36d6; --accent-ink:#ffffff; --accent-soft:#e6e5fb;
+  --good:#0e7a56; --good-soft:#d8f4e7; --bad:#b42f2a; --bad-soft:#fde3e1; --warn:#a15100; --warn-soft:#fdecd2;
+  --stage-a:#ffffff; --stage-b:#d6deef; --shadow:0 8px 28px rgba(15,23,41,.14);
+  --outline:rgba(15,23,41,.55); --chip:rgba(255,255,255,.92);
+  --font:'Outfit',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --math:'STIX Two Text','Cambria Math','Times New Roman',serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0a0f1f; --panel:#141b30; --panel2:#1b2442; --ink:#eef1fb; --muted:#9ba6c4; --line:#2a3558;
+  --accent:#8f8bff; --accent-ink:#0a0f1f; --accent-soft:#2b2a6b;
+  --good:#4fe0a4; --good-soft:#12382d; --bad:#ff8a84; --bad-soft:#431a19; --warn:#ffb75e; --warn-soft:#3f2a0c;
+  --stage-a:#1c2548; --stage-b:#090d1a; --shadow:0 8px 28px rgba(0,0,0,.5);
+  --outline:rgba(255,255,255,.4); --chip:rgba(20,27,48,.92); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0a0f1f; --panel:#141b30; --panel2:#1b2442; --ink:#eef1fb; --muted:#9ba6c4; --line:#2a3558;
+  --accent:#8f8bff; --accent-ink:#0a0f1f; --accent-soft:#2b2a6b;
+  --good:#4fe0a4; --good-soft:#12382d; --bad:#ff8a84; --bad-soft:#431a19; --warn:#ffb75e; --warn-soft:#3f2a0c;
+  --stage-a:#1c2548; --stage-b:#090d1a; --shadow:0 8px 28px rgba(0,0,0,.5);
+  --outline:rgba(255,255,255,.4); --chip:rgba(20,27,48,.92); color-scheme:dark}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:16px;overflow:hidden;
+  -webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
+button{font:inherit;color:inherit;cursor:pointer}
+button,input,select{touch-action:manipulation}
+svg.ic{width:1.35em;height:1.35em;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+
+#app{height:100%;display:grid;grid-template-rows:auto minmax(0,1fr);gap:10px;
+  padding-block:10px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header{display:flex;align-items:center;gap:12px;flex-wrap:wrap;min-width:0}
+.brand{display:flex;align-items:center;gap:10px;margin-right:auto;min-width:0}
+.logo{width:42px;height:42px;border-radius:12px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;flex:none}
+.brand h1{font-size:1.3rem;line-height:1.1;margin:0;font-weight:700;letter-spacing:-.01em}
+.brand small{display:block;color:var(--muted);font-size:.82rem;font-weight:500}
+.hgroup{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.seg{display:inline-flex;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:3px;gap:2px}
+.seg button{border:0;background:transparent;padding:8px 12px;border-radius:9px;font-weight:600;min-height:40px;min-width:44px}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.hbtn{display:inline-flex;align-items:center;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:12px;min-height:46px;padding:0 14px;font-weight:600}
+.hbtn:hover{border-color:var(--accent)}
+.hlabel{font-size:.74rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+
+main{display:grid;grid-template-columns:minmax(0,1fr) clamp(340px,29vw,430px);gap:12px;min-height:0}
+body.focus main{grid-template-columns:minmax(0,1fr)}
+body.focus #panel{display:none}
+
+#stage{position:relative;border-radius:20px;overflow:hidden;min-height:0;box-shadow:var(--shadow);
+  background:radial-gradient(120% 90% at 50% 20%,var(--stage-a),var(--stage-b));touch-action:none}
+#gl,#ink,#laser{position:absolute;inset:0;width:100%;height:100%;display:block}
+#gl{touch-action:none;cursor:grab}
+#ink{touch-action:none;pointer-events:none}
+body.drawing #ink{pointer-events:auto}
+body.drawing.t-pen #ink,body.drawing.t-hl #ink,body.drawing.t-line #ink,body.drawing.t-rect #ink,body.drawing.t-ellipse #ink,body.drawing.t-arrow #ink{cursor:crosshair}
+body.drawing.t-text #ink{cursor:text}
+#laser{pointer-events:none}
+
+.chip{position:absolute;background:var(--chip);border:1px solid var(--line);border-radius:14px;box-shadow:0 4px 16px rgba(0,0,0,.12);backdrop-filter:blur(6px)}
+#title{left:14px;top:14px;padding:10px 16px;max-width:min(62%,560px);pointer-events:none}
+#title b{display:block;font-size:1.25rem;font-weight:700;letter-spacing:-.01em}
+#title span{display:block;font-size:.9rem;color:var(--muted)}
+#join{right:14px;top:14px;padding:8px 14px;display:flex;align-items:center;gap:10px;min-width:min(330px,60%)}
+#join label{font-size:.78rem;text-transform:uppercase;letter-spacing:.08em;font-weight:700;color:var(--muted);white-space:nowrap}
+#join input{flex:1;min-width:80px}
+#join button{border:0;background:var(--accent);color:var(--accent-ink);border-radius:10px;min-height:42px;padding:0 14px;font-weight:700;white-space:nowrap}
+#views{left:14px;top:50%;transform:translateY(-50%);padding:6px;display:flex;flex-direction:column;gap:4px;z-index:5}
+#views button{border:0;background:transparent;border-radius:10px;min-height:44px;min-width:48px;padding:0 10px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+#views button:hover,#views button[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent)}
+#hint{left:50%;transform:translateX(-50%);top:14px;padding:8px 14px;font-size:.9rem;pointer-events:none;opacity:0;transition:opacity .25s;white-space:nowrap}
+#hint.show{opacity:1}
+@media (max-width:1100px){#title{max-width:48%}}
+
+input[type=range]{-webkit-appearance:none;appearance:none;height:34px;background:transparent;width:100%;margin:0;touch-action:pan-y}
+input[type=range]::-webkit-slider-runnable-track{height:8px;border-radius:6px;background:var(--line)}
+input[type=range]::-moz-range-track{height:8px;border-radius:6px;background:var(--line)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:30px;height:30px;border-radius:50%;background:var(--accent);border:4px solid var(--panel);margin-top:-11px;box-shadow:0 2px 8px rgba(0,0,0,.3)}
+input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;background:var(--accent);border:4px solid var(--panel)}
+
+/* ---------- panel ---------- */
+#panel{background:var(--panel);border-radius:20px;box-shadow:var(--shadow);display:grid;grid-template-rows:auto minmax(0,1fr);min-height:0;overflow:hidden}
+#tabs{display:grid;grid-template-columns:repeat(5,1fr);border-bottom:1px solid var(--line);background:var(--panel2)}
+#tabs button{border:0;background:transparent;padding:10px 2px 9px;font-weight:600;font-size:.88rem;display:flex;flex-direction:column;align-items:center;gap:3px;min-height:60px;color:var(--muted);border-bottom:3px solid transparent}
+#tabs button[aria-selected="true"]{color:var(--accent);border-bottom-color:var(--accent);background:var(--panel)}
+#tabbody{overflow:auto;padding:14px;min-height:0;-webkit-overflow-scrolling:touch;user-select:text;-webkit-user-select:text}
+.grp{font-size:.76rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:700;margin:14px 0 8px}
+.grp:first-child{margin-top:0}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:10px}
+.pcard{border:2px solid var(--line);background:var(--panel2);border-radius:14px;padding:6px 6px 8px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:2px;min-width:0}
+.pcard img{width:100%;aspect-ratio:1;object-fit:contain;border-radius:8px;background:radial-gradient(circle at 50% 35%,var(--panel),var(--panel2));display:block}
+.pcard .ph{width:100%;aspect-ratio:1}
+.pcard span{font-size:.82rem;font-weight:600;line-height:1.15;text-wrap:balance}
+.pcard[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.pcard:hover{border-color:var(--accent)}
+
+.prm{background:var(--panel2);border-radius:14px;padding:10px 12px 6px;margin-bottom:10px}
+.prm .top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.prm b{font-family:var(--math);font-style:italic;font-size:1.25rem;font-weight:600}
+.prm .nm{font-size:.82rem;color:var(--muted);margin-left:6px;font-style:normal;font-family:var(--font)}
+.step{display:flex;align-items:center;gap:6px}
+.step button{width:46px;height:46px;border-radius:12px;border:1px solid var(--line);background:var(--panel);font-size:1.4rem;font-weight:700;line-height:1}
+.step button:active{background:var(--accent-soft)}
+.step input{width:82px;height:46px;text-align:center;font:inherit;font-weight:700;font-size:1.1rem;border-radius:12px;border:1px solid var(--line);background:var(--panel);color:var(--ink);user-select:text;-webkit-user-select:text}
+.step .u{color:var(--muted);font-size:.9rem;min-width:22px}
+.bigbtns{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:6px 0 12px}
+.btn{min-height:52px;border-radius:12px;border:1px solid var(--line);background:var(--panel2);font-weight:600;padding:6px 10px;display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.btn:hover{border-color:var(--accent)}
+.btn.pri{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.sm{min-height:44px;font-size:.9rem}
+.note{font-size:.88rem;color:var(--muted);margin:6px 0 10px;line-height:1.4}
+
+.legend{display:flex;flex-direction:column;gap:6px}
+.lrow{display:flex;align-items:center;gap:10px;border:2px solid transparent;background:var(--panel2);border-radius:12px;padding:6px 10px 6px 6px;min-height:54px;text-align:left;width:100%}
+.lrow[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.lrow .sw{width:38px;height:38px;border-radius:10px;border:2px solid var(--panel);box-shadow:0 0 0 1px var(--line);flex:none}
+.lrow .tx{flex:1;min-width:0;font-weight:600;font-size:.92rem;line-height:1.2}
+.tag{font-size:.74rem;font-weight:700;padding:3px 8px;border-radius:99px;white-space:nowrap}
+.tag.y{background:var(--good-soft);color:var(--good)}
+.tag.n{background:var(--bad-soft);color:var(--bad)}
+.pal{display:grid;grid-template-columns:repeat(8,1fr);gap:8px;margin:10px 0}
+.pal button{aspect-ratio:1;border-radius:12px;border:3px solid var(--panel);box-shadow:0 0 0 1px var(--line);min-height:36px}
+.pal button:active{transform:scale(.92)}
+.row2{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+input[type=color]{width:52px;height:46px;border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:3px}
+
+.tgl{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--panel2);border-radius:12px;padding:6px 8px 6px 14px;margin-bottom:8px;min-height:54px;font-weight:600;width:100%;border:0;text-align:left}
+.tgl i{width:50px;height:30px;border-radius:99px;background:var(--line);position:relative;flex:none;transition:background .15s}
+.tgl i::after{content:"";position:absolute;left:3px;top:3px;width:24px;height:24px;border-radius:50%;background:#fff;transition:transform .15s}
+.tgl[aria-pressed="true"] i{background:var(--accent)}
+.tgl[aria-pressed="true"] i::after{transform:translateX(20px)}
+.sl{background:var(--panel2);border-radius:12px;padding:8px 14px 4px;margin-bottom:8px}
+.sl .top{display:flex;justify-content:space-between;font-weight:600}
+
+/* ---------- formulas ---------- */
+.story{background:var(--warn-soft);color:var(--ink);border-radius:14px;padding:12px 14px;line-height:1.45;font-size:.98rem;margin-bottom:10px}
+.story b{color:var(--warn)}
+.idea{background:var(--accent-soft);border-radius:14px;padding:12px 14px;line-height:1.45;font-size:.93rem;margin-bottom:12px}
+.idea b{color:var(--accent)}
+.sec{font-size:.78rem;text-transform:uppercase;letter-spacing:.1em;font-weight:700;color:var(--muted);margin:16px 0 8px}
+.eqc{background:var(--panel2);border-radius:14px;padding:10px 14px;margin-bottom:8px;font-family:var(--math);font-size:1.12rem}
+.eqc .lbl{font-family:var(--font);font-size:.82rem;font-weight:600;color:var(--muted);margin-bottom:4px}
+.eqc .ln{padding:1px 0;line-height:1.55}
+.eqc .ln.s{color:var(--muted)}
+.eqc .ans{font-weight:700;font-size:1.22rem;color:var(--ink);margin-top:2px}
+.eqc.tot{background:var(--accent);color:var(--accent-ink)}
+.eqc.tot .lbl,.eqc.tot .ln.s,.eqc.tot .ans{color:var(--accent-ink)}
+.eqc.len .ans{color:var(--warn)}
+.eqc i{font-style:italic}
+.eqc sup{font-size:.7em;line-height:0}
+.fr{display:inline-flex;flex-direction:column;vertical-align:middle;text-align:center;line-height:1.05;margin:0 2px;font-size:.88em}
+.fr span:first-child{border-bottom:1.5px solid currentColor;padding:0 2px}
+body.quiz .eqc .ans[data-hide="1"]{color:transparent;text-shadow:0 0 10px var(--ink);cursor:pointer;position:relative;min-height:1.6em}
+body.quiz .eqc .ans[data-hide="1"]::after{content:"tap to reveal";position:absolute;left:0;top:2px;text-shadow:none;font:600 .85rem var(--font);color:var(--accent-ink);background:var(--accent);padding:3px 10px;border-radius:8px}
+body.quiz .eqc.tot .ans[data-hide="1"]{text-shadow:0 0 10px var(--accent-ink)}
+body.quiz .eqc.tot .ans[data-hide="1"]::after{background:var(--accent-ink);color:var(--accent)}
+.legend-note{font-size:.84rem;color:var(--muted);margin:2px 0 8px}
+
+/* ---------- notes toolbar ---------- */
+#tools{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);z-index:6;padding:8px;display:flex;flex-direction:column;gap:6px;max-width:calc(100% - 28px);touch-action:none}
+#tools .tr{display:flex;align-items:center;gap:4px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+#tools .tr::-webkit-scrollbar{display:none}
+#tools button.tb{border:0;background:transparent;width:50px;height:50px;border-radius:12px;display:inline-grid;place-items:center;flex:none;position:relative}
+#tools button.tb svg{width:26px;height:26px}
+#tools button.tb:hover{background:var(--accent-soft)}
+#tools button.tb[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+#tools button.tb:disabled{opacity:.35}
+#tools .sep{width:1px;height:30px;background:var(--line);margin:0 4px;flex:none}
+#tools .grab{width:26px;height:50px;display:grid;place-items:center;color:var(--muted);cursor:grab;flex:none}
+.col{width:38px;height:38px;border-radius:50%;border:3px solid var(--panel);box-shadow:0 0 0 1px var(--line);flex:none;padding:0}
+.col[aria-pressed="true"]{box-shadow:0 0 0 3px var(--accent)}
+.wd{width:46px;height:46px;border:0;background:transparent;border-radius:12px;display:grid;place-items:center;flex:none}
+.wd i{display:block;border-radius:50%;background:currentColor}
+.wd[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent)}
+#pgno{font-weight:700;min-width:56px;text-align:center;font-variant-numeric:tabular-nums;flex:none}
+.pop{position:absolute;bottom:calc(100% + 8px);left:0;padding:8px;display:flex;gap:6px;z-index:8;flex-wrap:wrap;max-width:min(520px,calc(100vw - 40px))}
+.pop button{min-height:46px;padding:0 12px;border:1px solid var(--line);background:var(--panel2);border-radius:10px;font-weight:600;white-space:nowrap}
+.pop button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+#txtin{position:absolute;z-index:7;background:transparent;border:2px dashed var(--accent);border-radius:6px;outline:none;font-family:var(--font);padding:2px 6px;min-width:120px;user-select:text;-webkit-user-select:text}
+#toast{position:absolute;left:50%;top:70px;transform:translateX(-50%);z-index:20;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-weight:600;opacity:0;pointer-events:none;transition:opacity .2s;max-width:80%;text-align:center}
+#toast.show{opacity:1}
+
+@media (max-width:900px){
+  html,body{height:auto;min-height:100%}
+  body{overflow:auto}
+  #app{display:flex;flex-direction:column;height:auto;min-height:100dvh}
+  header{gap:8px}
+  .brand small,.hlabel,.hbtn span{display:none}
+  .hbtn{padding:0 12px;min-height:42px}
+  main{display:flex;flex-direction:column;height:auto}
+  #stage{height:min(72vh,600px);flex:none}
+  #panel{height:80vh;flex:none}
+  #title{max-width:calc(100% - 28px);padding:8px 12px}
+  #title b{font-size:1.05rem}
+  #join{min-width:0;left:14px;right:14px;top:70px;padding:6px 10px}
+  #views{top:auto;bottom:auto;left:14px;top:128px;transform:none;flex-direction:row}
+  #views button{min-width:40px;min-height:40px;padding:0 8px}
+  #tools button.tb{width:42px;height:42px}
+  #tools button.tb svg{width:22px;height:22px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
 </style>
-</head>
-<body class="bg-gray-900 text-white overflow-hidden h-screen w-screen flex flex-col">
-
-    <!-- Top Navigation & NCERT Presets Header -->
-    <header class="bg-gray-800 border-b border-gray-700 px-4 py-2 flex items-center justify-between z-20 shrink-0">
-        <div class="flex items-center space-x-3">
-            <div class="bg-indigo-600 text-white font-bold p-2 rounded-lg flex items-center gap-2">
-                <i class="fa-solid fa-cubes text-xl"></i>
-                <span class="text-lg">SolidLab</span>
-            </div>
-            <span class="text-gray-400 text-sm hidden md:inline">Surface Areas & Volumes Studio</span>
-        </div>
-
-        <!-- Preset Selector for Quick Teaching -->
-        <div class="flex items-center space-x-2">
-            <label class="text-sm font-medium text-gray-300 hidden lg:inline"><i class="fa-solid fa-bookmark text-yellow-400 mr-1"></i> NCERT Example:</label>
-            <select id="ncertPresetSelect" class="bg-gray-700 border border-gray-600 text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 max-w-[280px]">
-                <option value="custom">-- Select Combined Solid --</option>
-                <option value="toy">1. Toy (Cone on Hemisphere)</option>
-                <option value="vessel">2. Vessel (Hemisphere on Cylinder)</option>
-                <option value="gulab_jamun">3. Gulab Jamun (Cylinder + 2 Hemispheres)</option>
-                <option value="pen_stand">4. Pen Stand (Cuboid with Conical Depressions)</option>
-                <option value="cuboid_dome">5. Decorative Block (Hemisphere on Cube)</option>
-                <option value="tent">6. Circus Tent (Cone on Cylinder)</option>
-                <option disabled>--- Standalone Solids ---</option>
-                <option value="cylinder">Cylinder</option>
-                <option value="cone">Cone</option>
-                <option value="hemisphere">Hemisphere</option>
-                <option value="sphere">Sphere</option>
-                <option value="cuboid">Cube / Cuboid</option>
-            </select>
-            <button id="btnResetView" class="bg-gray-700 hover:bg-gray-600 text-white px-3 py-2 rounded-lg text-sm smartboard-btn flex items-center gap-1">
-                <i class="fa-solid fa-rotate-left"></i> <span class="hidden sm:inline">Reset Camera</span>
-            </button>
-            <button id="btnFullscreen" class="bg-indigo-700 hover:bg-indigo-600 text-white px-3 py-2 rounded-lg text-sm smartboard-btn">
-                <i class="fa-solid fa-expand"></i>
-            </button>
-        </div>
-    </header>
-
-    <!-- Main Workspace (Split View: 3D Viewport Left | Canvas & Formula Right) -->
-    <div class="flex-1 flex flex-col md:flex-row overflow-hidden relative">
-
-        <!-- LEFT PANE: 3D Scene Viewport -->
-        <div class="relative w-full md:w-1/2 h-1/2 md:h-full bg-black flex-1 border-r border-gray-800">
-            <!-- Three.js Canvas Container -->
-            <div id="canvas3dContainer" class="w-full h-full cursor-grab"></div>
-
-            <!-- Smartboard Floating 3D Control Bar -->
-            <div class="absolute top-3 left-3 flex flex-wrap gap-2 z-10 bg-gray-800/90 backdrop-blur border border-gray-700 p-2 rounded-xl shadow-lg">
-                <button id="toggleWireframe" class="bg-gray-700 hover:bg-gray-600 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 smartboard-btn">
-                    <i class="fa-solid fa-border-all text-indigo-400"></i> Wireframe
-                </button>
-                <button id="toggleXray" class="bg-gray-700 hover:bg-gray-600 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 smartboard-btn">
-                    <i class="fa-solid fa-eye text-emerald-400"></i> X-Ray / Transparent
-                </button>
-                <button id="toggleExplode" class="bg-gray-700 hover:bg-gray-600 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 smartboard-btn">
-                    <i class="fa-solid fa-arrows-split-up-and-left text-yellow-400"></i> Separate / Explode
-                </button>
-            </div>
-
-            <!-- Individual Face / Component Color Customization Box -->
-            <div id="colorPickerBox" class="absolute bottom-3 left-3 z-10 bg-gray-800/90 backdrop-blur border border-gray-700 p-3 rounded-xl shadow-lg max-w-xs text-xs">
-                <div class="font-bold mb-2 text-indigo-300 flex justify-between items-center">
-                    <span><i class="fa-solid fa-palette mr-1"></i> Part Colors</span>
-                    <!--<span class="text-[10px] text-gray-400">Tap to paint</span>-->
-                </div>
-                <div id="partColorPickers" class="space-y-2 max-h-36 overflow-y-auto pr-1">
-                    <!-- Dynamically injected color pickers for parts (e.g. Cone Top, Hemisphere Base) -->
-                </div>
-            </div>
-        </div>
-
-        <!-- RIGHT PANE: Dual Tab (Calculations & Digital Whiteboard Overlay) -->
-        <div class="w-full md:w-1/2 h-1/2 md:h-full bg-gray-900 flex flex-col relative">
-
-            <!-- Tab Headers -->
-            <div class="flex border-b border-gray-800 bg-gray-850 shrink-0">
-                <button id="tabMathBtn" class="flex-1 py-3 text-center text-sm font-bold border-b-2 border-indigo-500 text-indigo-400 bg-gray-800 flex items-center justify-center gap-2">
-                    <i class="fa-solid fa-calculator"></i> NCERT Formula & Calculations
-                </button>
-                <button id="tabNotesBtn" class="flex-1 py-3 text-center text-sm font-bold text-gray-400 border-b-2 border-transparent hover:text-white flex items-center justify-center gap-2">
-                    <i class="fa-solid fa-pen-to-square"></i> Smartboard Canvas / Notes
-                </button>
-            </div>
-
-            <!-- TAB 1: Math Calculator & Dimension Sliders -->
-            <div id="tabMath" class="flex-1 overflow-y-auto p-4 space-y-4">
-                <!-- Dimensions Control Card -->
-                <div class="bg-gray-800 rounded-xl p-4 border border-gray-700 shadow-md">
-                    <h3 class="text-sm font-semibold text-gray-300 mb-3 flex justify-between items-center">
-                        <span><i class="fa-solid fa-sliders text-indigo-400 mr-2"></i> Adjust Geometry Dimensions</span>
-                        <span id="unitDisplay" class="text-xs bg-indigo-900/60 text-indigo-300 px-2 py-0.5 rounded">Unit: cm</span>
-                    </h3>
-                    <div id="slidersContainer" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <!-- Dynamic sliders generated based on active shape -->
-                    </div>
-                </div>
-
-                <!-- NCERT Math Breakdown Panel -->
-                <div class="bg-gray-800 rounded-xl p-4 border border-gray-700 shadow-md">
-                    <div class="border-b border-gray-700 pb-2 mb-3 flex items-center justify-between">
-                        <h3 class="text-md font-bold text-yellow-400 flex items-center gap-2">
-                            <i class="fa-solid fa-lightbulb"></i> Step-By-Step Solution Concept
-                        </h3>
-                        <span class="text-xs bg-emerald-900/60 text-emerald-300 px-2 py-1 rounded-full font-mono">Class 10 Method</span>
-                    </div>
-
-                    <!-- Exclusion / Surface Area Logic Explanation -->
-                    <div id="teachingTip" class="bg-indigo-950/70 border border-indigo-800/80 rounded-lg p-3 text-xs text-indigo-200 mb-3">
-                        <p class="font-semibold text-yellow-300 mb-1"><i class="fa-solid fa-circle-info"></i> Key Teacher Concept Notice:</p>
-                        <p id="tipText">When joining solids, the overlapping contact base areas are hidden/covered and MUST BE EXCLUDED when calculating Total Surface Area!</p>
-                    </div>
-
-                    <!-- Formulas Output -->
-                    <div class="space-y-3 text-sm">
-                        <!-- TSA Formula Breakdown -->
-                        <div class="bg-gray-900 p-3 rounded-lg border border-gray-700">
-                            <div class="text-xs text-gray-400 font-semibold uppercase tracking-wider mb-1">Total Surface Area (TSA) Formula</div>
-                            <div id="tsaFormula" class="text-indigo-300 font-medium overflow-x-auto py-1"></div>
-                            <div id="tsaCalc" class="text-emerald-400 font-mono text-sm mt-1"></div>
-                        </div>
-
-                        <!-- Volume Formula Breakdown -->
-                        <div class="bg-gray-900 p-3 rounded-lg border border-gray-700">
-                            <div class="text-xs text-gray-400 font-semibold uppercase tracking-wider mb-1">Total Volume (V) Formula</div>
-                            <div id="volFormula" class="text-indigo-300 font-medium overflow-x-auto py-1"></div>
-                            <div id="volCalc" class="text-emerald-400 font-mono text-sm mt-1"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- TAB 2: Full Smartboard Annotation Canvas Overlay -->
-            <div id="tabNotes" class="hidden flex-1 flex-col h-full bg-gray-950 relative overflow-hidden">
-                <!-- Digital Canvas for drawing -->
-                <canvas id="smartboardCanvas" class="w-full h-full absolute inset-0 z-10 cursor-crosshair"></canvas>
-
-                <!-- Floating Note Toolbar (Designed for big touch targets on smartboard) -->
-                <div class="absolute top-3 left-1/2 -translate-x-1/2 z-20 bg-gray-800 border border-gray-700 p-2 rounded-2xl shadow-2xl flex items-center space-x-2">
-                    <!-- Pen Tools -->
-                    <button id="toolPen" class="bg-indigo-600 text-white p-2.5 rounded-xl text-lg w-11 h-11 flex items-center justify-center smartboard-btn shadow">
-                        <i class="fa-solid fa-pen"></i>
-                    </button>
-                    <button id="toolHighlighter" class="bg-gray-700 text-yellow-300 hover:bg-gray-600 p-2.5 rounded-xl text-lg w-11 h-11 flex items-center justify-center smartboard-btn">
-                        <i class="fa-solid fa-highlighter"></i>
-                    </button>
-                    <button id="toolEraser" class="bg-gray-700 text-white hover:bg-gray-600 p-2.5 rounded-xl text-lg w-11 h-11 flex items-center justify-center smartboard-btn">
-                        <i class="fa-solid fa-eraser"></i>
-                    </button>
-
-                    <div class="h-6 w-px bg-gray-700"></div>
-
-                    <!-- Colors -->
-                    <div class="flex items-center space-x-1.5">
-                        <button data-color="#ef4444" class="color-btn w-8 h-8 rounded-full bg-red-500 border-2 border-white/20 active:scale-110"></button>
-                        <button data-color="#f59e0b" class="color-btn w-8 h-8 rounded-full bg-amber-500 border-2 border-white/20 active:scale-110"></button>
-                        <button data-color="#10b981" class="color-btn w-8 h-8 rounded-full bg-emerald-500 border-2 border-white/20 active:scale-110"></button>
-                        <button data-color="#3b82f6" class="color-btn w-8 h-8 rounded-full bg-blue-500 border-2 border-white border-2 active:scale-110"></button>
-                        <button data-color="#ffffff" class="color-btn w-8 h-8 rounded-full bg-white border-2 border-white/20 active:scale-110"></button>
-                    </div>
-
-                    <div class="h-6 w-px bg-gray-700"></div>
-
-                    <!-- Stroke Thickness -->
-                    <select id="penSize" class="bg-gray-700 text-white text-xs rounded-lg px-2 py-2">
-                        <option value="3">Thin Pen</option>
-                        <option value="6" selected>Medium</option>
-                        <option value="12">Thick Marker</option>
-                    </select>
-
-                    <button id="btnClearCanvas" class="bg-red-600/80 hover:bg-red-600 text-white px-3 py-2 rounded-xl text-xs font-semibold smartboard-btn flex items-center gap-1">
-                        <i class="fa-solid fa-trash"></i> Clear
-                    </button>
-                </div>
-            </div>
-
-        </div>
+<div id="app">
+  <header>
+    <div class="brand">
+      <div class="logo" id="logo"></div>
+      <div><h1>Solids Lab 3D</h1><small>-dxsh</small></div>
     </div>
-
-    <!-- Application Scripting (Three.js 3D engine, NCERT Geometry Math, Canvas Annotations) -->
-    <script>
-        // --- GLOBAL STATE & VARIABLES ---
-        let scene, camera, renderer, controls;
-        let currentShapeGroup = new THREE.Group();
-        let activeModelKey = 'toy'; // Default NCERT Example: Toy (Cone on Hemisphere)
-        
-        // Dynamic Parameters
-        let shapeParams = {
-            radius: 3,
-            radius2: 3, // For secondary shape if different
-            height: 6,
-            height2: 4,
-            length: 8,
-            width: 6,
-            depth: 4,
-            explodeOffset: 0,
-            isExploded: false,
-            isWireframe: false,
-            isXray: false
-        };
-
-        // Material palette for shape components
-        const materialPalette = [
-            0x3b82f6, // Blue
-            0xef4444, // Red
-            0x10b981, // Emerald
-            0xf59e0b, // Amber
-            0x8b5cf6, // Purple
-            0xec4899  // Pink
-        ];
-
-        // Part mesh references for dynamic recoloring
-        let shapePartsMap = {};
-
-        // --- THREE.JS INITIALIZATION ---
-        function init3D() {
-            const container = document.getElementById('canvas3dContainer');
-            
-            scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x0f172a); // Deep Navy background
-
-            // Camera setup
-            camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
-            camera.position.set(12, 12, 16);
-
-            // Renderer setup
-            renderer = new THREE.WebGLRenderer({ antialias: true });
-            renderer.setSize(container.clientWidth, container.clientHeight);
-            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-            renderer.shadowMap.enabled = true;
-            container.appendChild(renderer.domElement);
-
-            // Orbit Controls optimized for touch smartboards
-            controls = new THREE.OrbitControls(camera, renderer.domElement);
-            controls.enableDamping = true;
-            controls.dampingFactor = 0.05;
-            controls.rotateSpeed = 0.8;
-            controls.touchAction = 'none';
-
-            // Lighting Setup
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
-            scene.add(ambientLight);
-
-            const dirLight1 = new THREE.DirectionalLight(0xffffff, 0.8);
-            dirLight1.position.set(10, 20, 15);
-            scene.add(dirLight1);
-
-            const dirLight2 = new THREE.DirectionalLight(0x818cf8, 0.4);
-            dirLight2.position.set(-10, -10, -10);
-            scene.add(dirLight2);
-
-            // Grid & Axes Helper for spatial reference
-            const gridHelper = new THREE.GridHelper(30, 30, 0x475569, 0x1e293b);
-            gridHelper.position.y = -5;
-            scene.add(gridHelper);
-
-            scene.add(currentShapeGroup);
-
-            // Window resize handler
-            window.addEventListener('resize', onWindowResize);
-
-            // Initial render call
-            loadPresetModel(activeModelKey);
-            animate();
-        }
-
-        function onWindowResize() {
-            const container = document.getElementById('canvas3dContainer');
-            camera.aspect = container.clientWidth / container.clientHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(container.clientWidth, container.clientHeight);
-            resizeSmartboardCanvas();
-        }
-
-        function animate() {
-            requestAnimationFrame(animate);
-            controls.update();
-            renderer.render(scene, camera);
-        }
-
-        // --- MESH BUILDERS FOR NCERT COMBINED SHAPES ---
-        function clearCurrentShape() {
-            while (currentShapeGroup.children.length > 0) {
-                const obj = currentShapeGroup.children[0];
-                if (obj.geometry) obj.geometry.dispose();
-                if (obj.material) {
-                    if (Array.isArray(obj.material)) obj.material.forEach(m => m.dispose());
-                    else obj.material.dispose();
-                }
-                currentShapeGroup.remove(obj);
-            }
-            shapePartsMap = {};
-        }
-
-        function createStandardMaterial(colorHex, opacity = 1.0) {
-            return new THREE.MeshStandardMaterial({
-                color: colorHex,
-                roughness: 0.3,
-                metalness: 0.1,
-                wireframe: shapeParams.isWireframe,
-                transparent: shapeParams.isXray || opacity < 1.0,
-                opacity: shapeParams.isXray ? 0.4 : opacity,
-                side: THREE.DoubleSide
-            });
-        }
-
-        function buildShapeGeometry() {
-            clearCurrentShape();
-            const offset = shapeParams.isExploded ? 2.0 : 0;
-            const r = shapeParams.radius;
-            const h = shapeParams.height;
-
-            switch (activeModelKey) {
-                case 'toy': { // Cone mounted on a Hemisphere
-                    // Hemisphere Base
-                    const hemiGeo = new THREE.SphereGeometry(r, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2);
-                    const hemiMat = createStandardMaterial(materialPalette[0]);
-                    const hemiMesh = new THREE.Mesh(hemiGeo, hemiMat);
-                    hemiMesh.rotation.x = Math.PI; // Point hemispherical curve downwards
-                    hemiMesh.position.y = -offset;
-
-                    // Cone Top
-                    const coneGeo = new THREE.ConeGeometry(r, h, 32);
-                    const coneMat = createStandardMaterial(materialPalette[1]);
-                    const coneMesh = new THREE.Mesh(coneGeo, coneMat);
-                    coneMesh.position.y = h / 2 + offset;
-
-                    currentShapeGroup.add(hemiMesh);
-                    currentShapeGroup.add(coneMesh);
-
-                    shapePartsMap['Hemisphere Base'] = hemiMesh;
-                    shapePartsMap['Top Cone'] = coneMesh;
-                    break;
-                }
-
-                case 'vessel': { // Hemisphere mounted on Hollow Cylinder
-                    // Cylinder Body
-                    const cylGeo = new THREE.CylinderGeometry(r, r, h, 32, 1, true); // open ended
-                    const cylMat = createStandardMaterial(materialPalette[0]);
-                    const cylMesh = new THREE.Mesh(cylGeo, cylMat);
-
-                    // Hemisphere Bottom
-                    const hemiGeo = new THREE.SphereGeometry(r, 32, 16, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2);
-                    const hemiMat = createStandardMaterial(materialPalette[3]);
-                    const hemiMesh = new THREE.Mesh(hemiGeo, hemiMat);
-                    hemiMesh.position.y = -h / 2 - offset;
-
-                    currentShapeGroup.add(cylMesh);
-                    currentShapeGroup.add(hemiMesh);
-
-                    shapePartsMap['Cylinder Wall'] = cylMesh;
-                    shapePartsMap['Bottom Hemisphere'] = hemiMesh;
-                    break;
-                }
-
-                case 'gulab_jamun': { // Cylinder with 2 Hemispherical Ends
-                    // Central Cylinder
-                    const cylGeo = new THREE.CylinderGeometry(r, r, h, 32);
-                    const cylMat = createStandardMaterial(materialPalette[0]);
-                    const cylMesh = new THREE.Mesh(cylGeo, cylMat);
-
-                    // Top Hemisphere
-                    const topHemiGeo = new THREE.SphereGeometry(r, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2);
-                    const topHemiMat = createStandardMaterial(materialPalette[1]);
-                    const topHemiMesh = new THREE.Mesh(topHemiGeo, topHemiMat);
-                    topHemiMesh.position.y = h / 2 + offset;
-
-                    // Bottom Hemisphere
-                    const botHemiGeo = new THREE.SphereGeometry(r, 32, 16, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2);
-                    const botHemiMat = createStandardMaterial(materialPalette[2]);
-                    const botHemiMesh = new THREE.Mesh(botHemiGeo, botHemiMat);
-                    botHemiMesh.position.y = -h / 2 - offset;
-
-                    currentShapeGroup.add(cylMesh);
-                    currentShapeGroup.add(topHemiMesh);
-                    currentShapeGroup.add(botHemiMesh);
-
-                    shapePartsMap['Cylinder Center'] = cylMesh;
-                    shapePartsMap['Top Cap'] = topHemiMesh;
-                    shapePartsMap['Bottom Cap'] = botHemiMesh;
-                    break;
-                }
-
-                case 'cuboid_dome': { // Block/Cube with Hemisphere on Top
-                    const l = shapeParams.length;
-                    const w = shapeParams.width;
-                    const d = shapeParams.depth;
-
-                    // Cuboid Base
-                    const boxGeo = new THREE.BoxGeometry(l, d, w);
-                    const boxMat = createStandardMaterial(materialPalette[0]);
-                    const boxMesh = new THREE.Mesh(boxGeo, boxMat);
-
-                    // Top Hemisphere Dome
-                    const domeGeo = new THREE.SphereGeometry(r, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2);
-                    const domeMat = createStandardMaterial(materialPalette[4]);
-                    const domeMesh = new THREE.Mesh(domeGeo, domeMat);
-                    domeMesh.position.y = d / 2 + offset;
-
-                    currentShapeGroup.add(boxMesh);
-                    currentShapeGroup.add(domeMesh);
-
-                    shapePartsMap['Cuboid Base'] = boxMesh;
-                    shapePartsMap['Dome Hemisphere'] = domeMesh;
-                    break;
-                }
-
-                case 'pen_stand': { // Cuboid with Conical Depressions
-                    const l = shapeParams.length;
-                    const w = shapeParams.width;
-                    const d = shapeParams.depth;
-
-                    // Main Cuboid Block
-                    const boxGeo = new THREE.BoxGeometry(l, d, w);
-                    const boxMat = createStandardMaterial(materialPalette[0], 0.85);
-                    const boxMesh = new THREE.Mesh(boxGeo, boxMat);
-                    currentShapeGroup.add(boxMesh);
-                    shapePartsMap['Wood Block'] = boxMesh;
-
-                    // 2 Conical Depressions (represented visual inner cones)
-                    const coneGeo = new THREE.ConeGeometry(r, h, 32);
-                    const coneMat = createStandardMaterial(materialPalette[1]);
-
-                    const cone1 = new THREE.Mesh(coneGeo, coneMat);
-                    cone1.rotation.x = Math.PI; // point downwards inside
-                    cone1.position.set(-l/4, d/2 - h/2 + offset, 0);
-
-                    const cone2 = new THREE.Mesh(coneGeo, coneMat);
-                    cone2.rotation.x = Math.PI;
-                    cone2.position.set(l/4, d/2 - h/2 + offset, 0);
-
-                    currentShapeGroup.add(cone1);
-                    currentShapeGroup.add(cone2);
-
-                    shapePartsMap['Conical Cavity 1'] = cone1;
-                    shapePartsMap['Conical Cavity 2'] = cone2;
-                    break;
-                }
-
-                case 'tent': { // Cone on Cylinder
-                    const cylGeo = new THREE.CylinderGeometry(r, r, h, 32);
-                    const cylMat = createStandardMaterial(materialPalette[0]);
-                    const cylMesh = new THREE.Mesh(cylGeo, cylMat);
-
-                    const coneGeo = new THREE.ConeGeometry(r, shapeParams.height2, 32);
-                    const coneMat = createStandardMaterial(materialPalette[3]);
-                    const coneMesh = new THREE.Mesh(coneGeo, coneMat);
-                    coneMesh.position.y = h/2 + shapeParams.height2/2 + offset;
-
-                    currentShapeGroup.add(cylMesh);
-                    currentShapeGroup.add(coneMesh);
-
-                    shapePartsMap['Cylinder Base'] = cylMesh;
-                    shapePartsMap['Conical Roof'] = coneMesh;
-                    break;
-                }
-
-                // Standalone shapes
-                case 'cylinder': {
-                    const geo = new THREE.CylinderGeometry(r, r, h, 32);
-                    const mat = createStandardMaterial(materialPalette[0]);
-                    const mesh = new THREE.Mesh(geo, mat);
-                    currentShapeGroup.add(mesh);
-                    shapePartsMap['Cylinder'] = mesh;
-                    break;
-                }
-                case 'cone': {
-                    const geo = new THREE.ConeGeometry(r, h, 32);
-                    const mat = createStandardMaterial(materialPalette[1]);
-                    const mesh = new THREE.Mesh(geo, mat);
-                    currentShapeGroup.add(mesh);
-                    shapePartsMap['Cone'] = mesh;
-                    break;
-                }
-                case 'hemisphere': {
-                    const geo = new THREE.SphereGeometry(r, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2);
-                    const mat = createStandardMaterial(materialPalette[2]);
-                    const mesh = new THREE.Mesh(geo, mat);
-                    currentShapeGroup.add(mesh);
-                    shapePartsMap['Hemisphere'] = mesh;
-                    break;
-                }
-                case 'sphere': {
-                    const geo = new THREE.SphereGeometry(r, 32, 32);
-                    const mat = createStandardMaterial(materialPalette[4]);
-                    const mesh = new THREE.Mesh(geo, mat);
-                    currentShapeGroup.add(mesh);
-                    shapePartsMap['Sphere'] = mesh;
-                    break;
-                }
-                case 'cuboid': {
-                    const geo = new THREE.BoxGeometry(shapeParams.length, shapeParams.depth, shapeParams.width);
-                    const mat = createStandardMaterial(materialPalette[5]);
-                    const mesh = new THREE.Mesh(geo, mat);
-                    currentShapeGroup.add(mesh);
-                    shapePartsMap['Cuboid'] = mesh;
-                    break;
-                }
-            }
-
-            renderColorPickersUI();
-            updateCalculationsAndSliders();
-        }
-
-        // --- UI COLOR PICKER INJECTION ---
-        function renderColorPickersUI() {
-            const container = document.getElementById('partColorPickers');
-            container.innerHTML = '';
-
-            Object.keys(shapePartsMap).forEach((partName, idx) => {
-                const mesh = shapePartsMap[partName];
-                const hexColor = '#' + mesh.material.color.getHexString();
-
-                const item = document.createElement('div');
-                item.className = "flex items-center justify-between bg-gray-700/60 p-1.5 rounded-lg";
-                item.innerHTML = `
-                    <span class="text-gray-200 font-medium">${partName}</span>
-                    <input type="color" value="${hexColor}" data-part="${partName}" class="w-7 h-7 rounded border-0 cursor-pointer bg-transparent">
-                `;
-                container.appendChild(item);
-
-                // Listener for real-time color change
-                item.querySelector('input').addEventListener('input', (e) => {
-                    shapePartsMap[partName].material.color.set(e.target.value);
-                });
-            });
-        }
-
-        // --- SLIDERS & MATH FORMULA ENGINE ---
-        function updateCalculationsAndSliders() {
-            const container = document.getElementById('slidersContainer');
-            
-            // Build dynamic sliders HTML if model changed
-            if (container.dataset.activeModel !== activeModelKey) {
-                container.dataset.activeModel = activeModelKey;
-                container.innerHTML = '';
-
-                if (['toy', 'vessel', 'gulab_jamun', 'cylinder', 'cone', 'hemisphere', 'sphere'].includes(activeModelKey)) {
-                    container.innerHTML += createSliderHTML('radius', 'Radius (r)', shapeParams.radius, 1, 8, 0.5);
-                }
-                if (['toy', 'vessel', 'gulab_jamun', 'cylinder', 'cone', 'pen_stand'].includes(activeModelKey)) {
-                    container.innerHTML += createSliderHTML('height', 'Height (h)', shapeParams.height, 2, 12, 0.5);
-                }
-                if (activeModelKey === 'tent') {
-                    container.innerHTML += createSliderHTML('radius', 'Radius (r)', shapeParams.radius, 1, 8, 0.5);
-                    container.innerHTML += createSliderHTML('height', 'Cylinder Height (h1)', shapeParams.height, 2, 10, 0.5);
-                    container.innerHTML += createSliderHTML('height2', 'Cone Height (h2)', shapeParams.height2, 1, 8, 0.5);
-                }
-                if (['cuboid_dome', 'pen_stand', 'cuboid'].includes(activeModelKey)) {
-                    container.innerHTML += createSliderHTML('length', 'Length (l)', shapeParams.length, 3, 12, 0.5);
-                    container.innerHTML += createSliderHTML('width', 'Width (w)', shapeParams.width, 3, 12, 0.5);
-                    container.innerHTML += createSliderHTML('depth', 'Height (h)', shapeParams.depth, 2, 10, 0.5);
-                    if (['cuboid_dome', 'pen_stand'].includes(activeModelKey)) {
-                        container.innerHTML += createSliderHTML('radius', 'Cavity/Dome Radius (r)', shapeParams.radius, 0.5, 3, 0.2);
-                    }
-                }
-
-                // Bind slider events
-                container.querySelectorAll('input[type="range"]').forEach(input => {
-                    input.addEventListener('input', (e) => {
-                        const param = e.target.dataset.param;
-                        shapeParams[param] = parseFloat(e.target.value);
-                        document.getElementById(`val_${param}`).innerText = e.target.value;
-                        buildShapeGeometry();
-                    });
-                });
-            }
-
-            // Calculate Formulas & Solutions
-            calculateMathValues();
-        }
-
-        function createSliderHTML(paramKey, label, val, min, max, step) {
-            return `
-                <div class="space-y-1">
-                    <div class="flex justify-between text-xs font-semibold text-gray-300">
-                        <span>${label}</span>
-                        <span id="val_${paramKey}" class="text-indigo-400 font-mono">${val}</span>
-                    </div>
-                    <input type="range" data-param="${paramKey}" min="${min}" max="${max}" step="${step}" value="${val}"
-                        class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-indigo-500">
-                </div>
-            `;
-        }
-
-        function calculateMathValues() {
-            const r = shapeParams.radius;
-            const h = shapeParams.height;
-            const l = shapeParams.length;
-            const w = shapeParams.width;
-            const d = shapeParams.depth;
-
-            let tsaStr = '', volStr = '', tsaVal = 0, volVal = 0;
-            let tipText = "Notice: Overlapping contact areas are subtracted from total surface calculations!";
-
-            switch (activeModelKey) {
-                case 'toy': { // Cone on Hemisphere
-                    const slantHeight = Math.sqrt(r * r + h * h);
-                    tsaStr = `\\text{TSA} = \\text{CSA (Cone)} + \\text{CSA (Hemisphere)} = \\pi r l + 2\\pi r^2`;
-                    tsaVal = Math.PI * r * slantHeight + 2 * Math.PI * r * r;
-                    
-                    volStr = `V = \\text{Vol (Cone)} + \\text{Vol (Hemisphere)} = \\frac{1}{3}\\pi r^2 h + \\frac{2}{3}\\pi r^3`;
-                    volVal = (1/3) * Math.PI * r * r * h + (2/3) * Math.PI * Math.pow(r, 3);
-                    tipText = `Slant height l = \\sqrt{r^2 + h^2} = \\sqrt{${r}^2 + ${h}^2} = ${slantHeight.toFixed(2)} \\text{ cm}`;
-                    break;
-                }
-                case 'vessel': { // Hemisphere on Cylinder
-                    tsaStr = `\\text{TSA} = \\text{CSA (Cylinder)} + \\text{CSA (Hemisphere)} = 2\\pi r h + 2\\pi r^2`;
-                    tsaVal = 2 * Math.PI * r * h + 2 * Math.PI * r * r;
-
-                    volStr = `V = \\text{Vol (Cylinder)} + \\text{Vol (Hemisphere)} = \\pi r^2 h + \\frac{2}{3}\\pi r^3`;
-                    volVal = Math.PI * r * r * h + (2/3) * Math.PI * Math.pow(r, 3);
-                    break;
-                }
-                case 'gulab_jamun': { // Cylinder + 2 Hemispheres
-                    tsaStr = `\\text{TSA} = \\text{CSA (Cylinder)} + 2 \\times \\text{CSA (Hemisphere)} = 2\\pi r h + 4\\pi r^2`;
-                    tsaVal = 2 * Math.PI * r * h + 4 * Math.PI * r * r;
-
-                    volStr = `V = \\pi r^2 h + 2 \\times \\left(\\frac{2}{3}\\pi r^3\\right) = \\pi r^2 h + \\frac{4}{3}\\pi r^3`;
-                    volVal = Math.PI * r * r * h + (4/3) * Math.PI * Math.pow(r, 3);
-                    break;
-                }
-                case 'cuboid_dome': { // Block with Hemisphere on top
-                    tsaStr = `\\text{TSA} = \\text{TSA (Cuboid)} + \\text{CSA (Hemisphere)} - \\text{Base Area (Circle)} = 2(lw+wh+hl) + 2\\pi r^2 - \\pi r^2`;
-                    tsaVal = 2 * (l*w + w*d + d*l) + Math.PI * r * r;
-
-                    volStr = `V = \\text{Vol (Cuboid)} + \\text{Vol (Hemisphere)} = (l \\times w \\times h) + \\frac{2}{3}\\pi r^3`;
-                    volVal = (l * w * d) + (2/3) * Math.PI * Math.pow(r, 3);
-                    break;
-                }
-                case 'pen_stand': { // Cuboid minus 2 Conical Cavities
-                    tsaStr = `\\text{TSA} = \\text{TSA (Cuboid)} + 2\\times\\text{CSA (Cone)} - 2\\times\\text{Base (Circle)}`;
-                    const slantHeight = Math.sqrt(r * r + h * h);
-                    tsaVal = 2 * (l*w + w*d + d*l) + 2 * (Math.PI * r * slantHeight) - 2 * (Math.PI * r * r);
-
-                    volStr = `V = \\text{Vol (Cuboid)} - 2 \\times \\text{Vol (Cone)} = (l \\times w \\times h) - 2\\left(\\frac{1}{3}\\pi r^2 h\\right)`;
-                    volVal = (l * w * d) - 2 * ((1/3) * Math.PI * r * r * h);
-                    break;
-                }
-                default: {
-                    tsaStr = `\\text{TSA Standard Calculation}`;
-                    tsaVal = 2 * Math.PI * r * (r + h);
-                    volStr = `V = \\pi r^2 h`;
-                    volVal = Math.PI * r * r * h;
-                }
-            }
-
-            document.getElementById('tipText').innerText = tipText;
-            document.getElementById('tsaFormula').innerText = `\\[ ${tsaStr} \\]`;
-            document.getElementById('tsaCalc').innerHTML = `<b>Total Area:</b> <span class="text-xl">${tsaVal.toFixed(2)}</span> cm²`;
-
-            document.getElementById('volFormula').innerText = `\\[ ${volStr} \\]`;
-            document.getElementById('volCalc').innerHTML = `<b>Total Volume:</b> <span class="text-xl">${volVal.toFixed(2)}</span> cm³`;
-
-            // Trigger MathJax re-render if loaded
-            if (window.MathJax && MathJax.typeset) {
-                MathJax.typeset();
-            }
-        }
-
-        function loadPresetModel(modelKey) {
-            activeModelKey = modelKey;
-            buildShapeGeometry();
-            
-            // Adjust camera view
-            camera.position.set(12, 12, 16);
-            controls.reset();
-        }
-
-        // --- SMARTBOARD DIGITAL CANVAS ANNOTATION ENGINE ---
-        let isDrawing = false;
-        let activePenColor = '#3b82f6';
-        let activePenSize = 6;
-        let activeTool = 'pen'; // pen, highlighter, eraser
-        let sbCanvas, sbCtx;
-
-        function initSmartboardCanvas() {
-            sbCanvas = document.getElementById('smartboardCanvas');
-            sbCtx = sbCanvas.getContext('2d');
-            resizeSmartboardCanvas();
-
-            // Touch & Mouse Listeners for Smartboard interactiveness
-            sbCanvas.addEventListener('mousedown', startDrawing);
-            sbCanvas.addEventListener('mousemove', draw);
-            sbCanvas.addEventListener('mouseup', stopDrawing);
-            sbCanvas.addEventListener('mouseleave', stopDrawing);
-
-            sbCanvas.addEventListener('touchstart', (e) => {
-                const touch = e.touches[0];
-                const rect = sbCanvas.getBoundingClientRect();
-                startDrawing({ clientX: touch.clientX, clientY: touch.clientY });
-            }, { passive: true });
-
-            sbCanvas.addEventListener('touchmove', (e) => {
-                const touch = e.touches[0];
-                draw({ clientX: touch.clientX, clientY: touch.clientY });
-            }, { passive: true });
-
-            sbCanvas.addEventListener('touchend', stopDrawing);
-        }
-
-        function resizeSmartboardCanvas() {
-            if (!sbCanvas) return;
-            const parent = sbCanvas.parentElement;
-            sbCanvas.width = parent.clientWidth;
-            sbCanvas.height = parent.clientHeight;
-        }
-
-        function startDrawing(e) {
-            isDrawing = true;
-            const rect = sbCanvas.getBoundingClientRect();
-            sbCtx.beginPath();
-            sbCtx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
-        }
-
-        function draw(e) {
-            if (!isDrawing) return;
-            const rect = sbCanvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-
-            sbCtx.lineCap = 'round';
-            sbCtx.lineJoin = 'round';
-
-            if (activeTool === 'eraser') {
-                sbCtx.clearRect(x - 15, y - 15, 30, 30);
-            } else {
-                sbCtx.strokeStyle = activeTool === 'highlighter' ? activePenColor + '66' : activePenColor;
-                sbCtx.lineWidth = activeTool === 'highlighter' ? activePenSize * 3 : activePenSize;
-                sbCtx.lineTo(x, y);
-                sbCtx.stroke();
-            }
-        }
-
-        function stopDrawing() {
-            if (isDrawing) {
-                sbCtx.closePath();
-                isDrawing = false;
-            }
-        }
-
-        // --- DOM CONTROLS & EVENT BINDINGS ---
-        window.onload = function() {
-            init3D();
-            initSmartboardCanvas();
-
-            // Preset selector listener
-            document.getElementById('ncertPresetSelect').addEventListener('change', (e) => {
-                if (e.target.value !== 'custom') {
-                    loadPresetModel(e.target.value);
-                }
-            });
-
-            // View Control Buttons
-            document.getElementById('toggleWireframe').addEventListener('click', () => {
-                shapeParams.isWireframe = !shapeParams.isWireframe;
-                buildShapeGeometry();
-            });
-
-            document.getElementById('toggleXray').addEventListener('click', () => {
-                shapeParams.isXray = !shapeParams.isXray;
-                buildShapeGeometry();
-            });
-
-            document.getElementById('toggleExplode').addEventListener('click', () => {
-                shapeParams.isExploded = !shapeParams.isExploded;
-                buildShapeGeometry();
-            });
-
-            document.getElementById('btnResetView').addEventListener('click', () => {
-                camera.position.set(12, 12, 16);
-                controls.reset();
-            });
-
-            // Fullscreen Toggle for Smartboard
-            document.getElementById('btnFullscreen').addEventListener('click', () => {
-                if (!document.fullscreenElement) {
-                    document.documentElement.requestFullscreen();
-                } else {
-                    if (document.exitFullscreen) document.exitFullscreen();
-                }
-            });
-
-            // Tab Switching Logic
-            const tabMathBtn = document.getElementById('tabMathBtn');
-            const tabNotesBtn = document.getElementById('tabNotesBtn');
-            const tabMath = document.getElementById('tabMath');
-            const tabNotes = document.getElementById('tabNotes');
-
-            tabMathBtn.addEventListener('click', () => {
-                tabMath.classList.remove('hidden');
-                tabNotes.classList.add('hidden');
-                tabMathBtn.className = "flex-1 py-3 text-center text-sm font-bold border-b-2 border-indigo-500 text-indigo-400 bg-gray-800 flex items-center justify-center gap-2";
-                tabNotesBtn.className = "flex-1 py-3 text-center text-sm font-bold text-gray-400 border-b-2 border-transparent hover:text-white flex items-center justify-center gap-2";
-            });
-
-            tabNotesBtn.addEventListener('click', () => {
-                tabNotes.classList.remove('hidden');
-                tabNotes.classList.add('flex');
-                tabMath.classList.add('hidden');
-                tabNotesBtn.className = "flex-1 py-3 text-center text-sm font-bold border-b-2 border-indigo-500 text-indigo-400 bg-gray-800 flex items-center justify-center gap-2";
-                tabMathBtn.className = "flex-1 py-3 text-center text-sm font-bold text-gray-400 border-b-2 border-transparent hover:text-white flex items-center justify-center gap-2";
-                resizeSmartboardCanvas();
-            });
-
-            // Smartboard Toolbar bindings
-            document.querySelectorAll('.color-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    activePenColor = e.target.dataset.color;
-                    if (activeTool === 'eraser') activeTool = 'pen';
-                });
-            });
-
-            document.getElementById('penSize').addEventListener('change', (e) => {
-                activePenSize = parseInt(e.target.value);
-            });
-
-            document.getElementById('toolPen').addEventListener('click', () => activeTool = 'pen');
-            document.getElementById('toolHighlighter').addEventListener('click', () => activeTool = 'highlighter');
-            document.getElementById('toolEraser').addEventListener('click', () => activeTool = 'eraser');
-            document.getElementById('btnClearCanvas').addEventListener('click', () => {
-                sbCtx.clearRect(0, 0, sbCanvas.width, sbCanvas.height);
-            });
-        };
-    </script>
-</body>
-</html>
+    <div class="hgroup">
+      <span class="hlabel">Value of π</span>
+      <div class="seg" id="piSeg" role="group" aria-label="Value of pi"></div>
+      <span class="hlabel">Unit</span>
+      <div class="seg" id="unitSeg" role="group" aria-label="Unit"></div>
+      <button class="hbtn" id="themeBtn" aria-label="Switch light or dark theme"></button>
+      <button class="hbtn" id="focusBtn" aria-pressed="false"></button>
+      <button class="hbtn" id="fsBtn" aria-label="Full screen"></button>
+    </div>
+  </header>
+  <main>
+    <section id="stage" aria-label="3D stage">
+      <canvas id="gl"></canvas>
+      <canvas id="ink"></canvas>
+      <canvas id="laser"></canvas>
+      <div class="chip" id="title"><b></b><span></span></div>
+      <div class="chip" id="join"><label for="joinR">Join</label><input type="range" id="joinR" min="0" max="100" value="0" aria-label="Join or separate the solids"><label for="joinR">Separate</label><button id="joinBtn"></button></div>
+      <div class="chip" id="views"></div>
+      <div class="chip" id="tools"></div>
+      <div id="toast" role="status"></div>
+    </section>
+    <aside id="panel">
+      <nav id="tabs" role="tablist"></nav>
+      <div id="tabbody"></div>
+    </aside>
+  </main>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(()=>{
+'use strict';
+/* ============ helpers ============ */
+const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
+const fmt=v=>String(+(+v).toFixed(2));
+const store={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const ICON={
+ hand:'<path d="m4 4 7.07 17 2.51-7.39L21 11.07z"/>',
+ pen:'<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
+ hl:'<path d="m9 11-6 6v3h9l3-3"/><path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4"/>',
+ eraser:'<path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/><path d="M22 21H7"/><path d="m5 11 9 9"/>',
+ laser:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r=".6"/>',
+ text:'<path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/>',
+ shapes:'<rect x="3" y="12" width="9" height="9" rx="1"/><circle cx="16.5" cy="7.5" r="4.5"/>',
+ line:'<path d="M5 19 19 5"/>', arrow:'<path d="M5 19 19 5"/><path d="M9 5h10v10"/>',
+ rect:'<rect x="3" y="5" width="18" height="14" rx="2"/>', ellipse:'<ellipse cx="12" cy="12" rx="9" ry="6"/>',
+ undo:'<path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/>',
+ redo:'<path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3l3 2.7"/>',
+ trash:'<path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>',
+ prev:'<path d="m15 18-6-6 6-6"/>', next:'<path d="m9 18 6-6-6-6"/>', plus:'<path d="M5 12h14"/><path d="M12 5v14"/>',
+ camera:'<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/>',
+ save:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/>',
+ eye:'<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+ eyeoff:'<path d="M9.9 4.2A10 10 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-2.2 3.2"/><path d="M6.6 6.6A17 17 0 0 0 2 12s3.6 7 10 7a10 10 0 0 0 5.4-1.6"/><path d="m2 2 20 20"/>',
+ page:'<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/>',
+ grip:'<circle cx="9" cy="6" r="1.2"/><circle cx="15" cy="6" r="1.2"/><circle cx="9" cy="12" r="1.2"/><circle cx="15" cy="12" r="1.2"/><circle cx="9" cy="18" r="1.2"/><circle cx="15" cy="18" r="1.2"/>',
+ max:'<path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/>',
+ fs:'<path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="m21 3-7 7"/><path d="m3 21 7-7"/>',
+ sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+ moon:'<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>',
+ solid:'<path d="m12 2 9 5v10l-9 5-9-5V7z"/><path d="m3 7 9 5 9-5"/><path d="M12 12v10"/>',
+ ruler:'<path d="M21.3 8.7 8.7 21.3a1 1 0 0 1-1.4 0l-4.6-4.6a1 1 0 0 1 0-1.4L15.3 2.7a1 1 0 0 1 1.4 0l4.6 4.6a1 1 0 0 1 0 1.4z"/><path d="m7.5 10.5 2 2M10.5 7.5l2 2M13.5 4.5l2 2M4.5 13.5l2 2"/>',
+ palette:'<circle cx="13.5" cy="6.5" r="1"/><circle cx="17.5" cy="10.5" r="1"/><circle cx="8.5" cy="7.5" r="1"/><circle cx="6.5" cy="12.5" r="1"/><path d="M12 2a10 10 0 0 0 0 20c1 0 2-.8 2-1.8 0-.5-.2-.9-.5-1.2-.3-.3-.5-.7-.5-1.2 0-1 .8-1.8 1.8-1.8H17a5 5 0 0 0 5-5c0-5-4.5-9-10-9z"/>',
+ calc:'<rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 6h8M8 10h.01M12 10h.01M16 10h.01M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01M16 18h.01"/>',
+ view:'<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+ play:'<path d="m6 4 14 8-14 8z"/>', rot:'<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>'
+};
+const ic=n=>`<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">${ICON[n]||''}</svg>`;
+
+/* ============ state ============ */
+const PIM={'22/7':{v:22/7},'3.14':{v:3.14},'π':{v:Math.PI}};
+const S={preset:'toy',params:{},colors:{},pi:store.get('sl.pi','22/7'),unit:store.get('sl.unit','cm'),
+ explode:0,opacity:1,wire:false,outline:true,dims:true,vals:true,spin:false,
+ clip:{on:false,axis:'x',pos:0},selected:null,hover:null,paintAll:false,quiz:false,tab:'solids',stageBg:store.get('sl.bg','auto'),stageBgCss:null};
+const LAB={c:1,m:0,y:0};
+
+/* ============ geometry kit ============ */
+const SEG=64, PI2=Math.PI*2;
+const V3=(a)=>new THREE.Vector3(a[0],a[1],a[2]);
+const G={
+ side:(rt,rb,h)=>new THREE.CylinderGeometry(rt,rb,h,SEG,1,true),
+ disc:r=>{const g=new THREE.CircleGeometry(r,SEG);g.rotateX(-Math.PI/2);return g},
+ dome:r=>new THREE.SphereGeometry(r,SEG,32,0,PI2,0,Math.PI/2),
+ bowl:r=>new THREE.SphereGeometry(r,SEG,32,0,PI2,Math.PI/2,Math.PI/2),
+ sphere:r=>new THREE.SphereGeometry(r,SEG,48),
+ plane:(w,h,rx=0,ry=0)=>{const g=new THREE.PlaneGeometry(w,h);if(rx)g.rotateX(rx);if(ry)g.rotateY(ry);return g}
+};
+function mix(c1,c2,t){const a=new THREE.Color(c1),b=new THREE.Color(c2);return '#'+a.lerp(b,t).getHexString()}
+const KC={sphere:'#8b5cf6',hemiUp:'#f97316',hemiDown:'#f97316',cyl:'#3b82f6',coneUp:'#22c55e',coneDown:'#22c55e',cuboid:'#14b8a6',frustum:'#ec4899'};
+const JOINT='#ef4444';
+const D=(sym,a,b,kind,o)=>({sym,a,b,kind:kind||sym,o:o||[0,0,0]});
+
+/* One solid of a vertical stack. Local origin = centre of its bottom face. */
+function compGeo(c){
+  const k=c.k,r=c.r,h=c.h,col=c.color||KC[k],fl=mix(col,'#ffffff',.32);
+  const F=(name,label,geo,pos,color)=>({name,label,geo,pos,color:color||col});
+  const hs=c.hs||'h';
+  switch(k){
+  case 'sphere':return{h:2*r,rad:r,faces:[F('curved','curved surface',G.sphere(r),[0,r,0])],dims:[D('r',[0,r,0],[r,r,0])]};
+  case 'hemiUp':return{h:r,rad:r,botFlat:'base',faces:[F('curved','curved surface',G.dome(r),[0,0,0]),F('base','flat circular face',G.disc(r),[0,0,0],fl)],dims:[D('r',[0,0,0],[r,0,0])]};
+  case 'hemiDown':return{h:r,rad:r,topFlat:'top',faces:[F('curved','curved surface',G.bowl(r),[0,r,0]),F('top','flat circular face',G.disc(r),[0,r,0],fl)],dims:[D('r',[0,r,0],[r,r,0])]};
+  case 'cyl':return{h,rad:r,topFlat:'top',botFlat:'base',faces:[F('curved','curved surface',G.side(r,r,h),[0,h/2,0]),F('base','bottom circle',G.disc(r),[0,0,0],fl),F('top','top circle',G.disc(r),[0,h,0],fl)],
+    dims:[D('r',[0,h,0],[r,h,0]),D(hs,[0,0,0],[0,h,0],'h',[-1.5,0,0])]};
+  case 'coneUp':return{h,rad:r,botFlat:'base',faces:[F('curved','curved surface',G.side(0,r,h),[0,h/2,0]),F('base','base circle',G.disc(r),[0,0,0],fl)],
+    dims:[D('r',[0,0,0],[r,0,0]),D(hs,[0,0,0],[0,h,0],'h',[-1.5,0,0]),D('l',[r,0,0],[0,h,0],'l',[1.3,.4,0])]};
+  case 'coneDown':return{h,rad:r,topFlat:'top',faces:[F('curved','curved surface',G.side(r,0,h),[0,h/2,0]),F('top','base circle',G.disc(r),[0,h,0],fl)],
+    dims:[D('r',[0,h,0],[r,h,0]),D(hs,[0,0,0],[0,h,0],'h',[-1.5,0,0]),D('l',[r,h,0],[0,0,0],'l',[1.3,-.4,0])]};
+  case 'frustum':{const rb=c.rb,rt=c.rt;return{h,rad:Math.max(rb,rt),topFlat:'top',botFlat:'base',faces:[F('curved','curved surface',G.side(rt,rb,h),[0,h/2,0]),F('base','bottom circle',G.disc(rb),[0,0,0],fl),F('top','top circle',G.disc(rt),[0,h,0],fl)],
+    dims:[D('R',[0,h,0],[rt,h,0]),D('r',[0,0,0],[rb,0,0]),D('h',[0,0,0],[0,h,0]),D('l',[rb,0,0],[rt,h,0])]};}
+  case 'cuboid':{const w=c.w,d=c.d,faces=[
+    F('top','top face',G.plane(w,d,-Math.PI/2),[0,h,0],mix(col,'#ffffff',.25)),
+    F('bottom','bottom face',G.plane(w,d,Math.PI/2),[0,0,0],mix(col,'#000000',.12)),
+    F('front','front face',G.plane(w,h),[0,h/2,d/2]),F('back','back face',G.plane(w,h,0,Math.PI),[0,h/2,-d/2]),
+    F('right','right face',G.plane(d,h,0,Math.PI/2),[w/2,h/2,0],mix(col,'#000000',.08)),F('left','left face',G.plane(d,h,0,-Math.PI/2),[-w/2,h/2,0],mix(col,'#000000',.08))];
+    const dims=c.cube?[D('a',[-w/2,0,d/2],[w/2,0,d/2],'a',[0,-1,0])]:
+      [D('l',[-w/2,0,d/2],[w/2,0,d/2],'a',[0,-1,0]),D('b',[w/2,0,d/2],[w/2,0,-d/2],'a',[1,-1,0]),D('h',[-w/2,0,d/2],[-w/2,h,d/2],'h',[-1,0,0])];
+    return{h,rad:Math.max(w,d)/2*1.2,topFlat:'top',botFlat:'bottom',partialTop:!!c.partialTop,faces,dims};}
+  }
+}
+/* Stack of solids -> definition. Faces that touch each other become "joint" faces (not counted in TSA). */
+function stackDef(comps){
+  const built=comps.map(compGeo),n=built.length,H=built.reduce((s,b)=>s+b.h,0),Rm=Math.max(...built.map(b=>b.rad));
+  const gap=Math.max(2,H*.36); let y=0; const parts=[];
+  built.forEach((b,i)=>{
+    const c=comps[i],prev=built[i-1],next=built[i+1],nm=c.label;
+    const topJoint=b.topFlat&&next&&next.botFlat&&!b.partialTop;
+    const botJoint=b.botFlat&&prev&&prev.topFlat;
+    const faces=b.faces.map(f=>{
+      const joint=(f.name===b.topFlat&&topJoint)||(f.name===b.botFlat&&botJoint);
+      return{id:`${i}.${f.name}`,label:`${nm} · ${f.label}`+(joint?' (joined)':''),geo:f.geo,pos:f.pos,color:joint?JOINT:f.color,counted:!joint,joint};
+    });
+    parts.push({pos:[0,y-H/2,0],ev:[0,(i-(n-1)/2)*gap,0],faces,dims:b.dims});
+    y+=b.h;
+  });
+  const dims=[];
+  if(n>1)dims.push(D('H',[-Rm*1.35,-H/2,0],[-Rm*1.35,H/2,0],'H'));
+  return{parts,dims,H};
+}
+
+/* ----- hollow solids ----- */
+function ghostFaces(list){return list.map(f=>({...f,ghost:true}))}
+function scoopsDef(P){
+  const{r,h}=P,gap=Math.max(2.5,r*1.4+1);
+  const body=[
+    {id:'side',label:'Outer curved surface (cylinder)',geo:G.side(r,r,h),pos:[0,0,0],color:'#3b82f6',counted:true},
+    {id:'cavTop',label:'Top hemispherical cavity',geo:G.bowl(r),pos:[0,h/2,0],color:'#f97316',counted:true},
+    {id:'cavBot',label:'Bottom hemispherical cavity',geo:G.dome(r),pos:[0,-h/2,0],color:'#f59e0b',counted:true}];
+  return{parts:[
+    {pos:[0,0,0],ev:[0,0,0],faces:body,dims:[D('r',[0,h/2,0],[r,h/2,0]),D('h',[r,-h/2,0],[r,h/2,0],'h',[1,0,0])]},
+    {pos:[0,0,0],ev:[0,gap,0],ghost:true,faces:ghostFaces([{id:'gT',ghostOf:'cavTop',geo:G.bowl(r),pos:[0,h/2,0],color:'#f97316'},{id:'gT2',ghostOf:'cavTop',geo:G.disc(r),pos:[0,h/2,0],color:'#f97316'}])},
+    {pos:[0,0,0],ev:[0,-gap,0],ghost:true,faces:ghostFaces([{id:'gB',ghostOf:'cavBot',geo:G.dome(r),pos:[0,-h/2,0],color:'#f59e0b'},{id:'gB2',ghostOf:'cavBot',geo:G.disc(r),pos:[0,-h/2,0],color:'#f59e0b'}])}],dims:[],H:h};
+}
+function coneCavDef(P){
+  const{r,h}=P,hc=Math.min(P.hc,h),gap=Math.max(2.5,hc*.7+1);
+  const body=[
+    {id:'side',label:'Outer curved surface (cylinder)',geo:G.side(r,r,h),pos:[0,0,0],color:'#3b82f6',counted:true},
+    {id:'base',label:'Bottom circle',geo:G.disc(r),pos:[0,-h/2,0],color:mix('#3b82f6','#ffffff',.3),counted:true},
+    {id:'cav',label:'Conical cavity (inner surface)',geo:G.side(r,0,hc),pos:[0,h/2-hc/2,0],color:'#22c55e',counted:true}];
+  return{parts:[
+    {pos:[0,0,0],ev:[0,0,0],faces:body,dims:[D('r',[0,h/2,0],[r,h/2,0]),D('h',[r,-h/2,0],[r,h/2,0],'h',[1,0,0]),D('h₁',[0,h/2,0],[0,h/2-hc,0],'h'),D('l',[r,h/2,0],[0,h/2-hc,0],'l')]},
+    {pos:[0,0,0],ev:[0,gap,0],ghost:true,faces:ghostFaces([{id:'gC',ghostOf:'cav',geo:G.side(r,0,hc),pos:[0,h/2-hc/2,0],color:'#22c55e'},{id:'gC2',ghostOf:'cav',geo:G.disc(r),pos:[0,h/2,0],color:'#22c55e'}])}],dims:[],H:h};
+}
+function cubeDepDef(P){
+  const{a,r}=P,gap=Math.max(2.5,r*1.2+1),c='#14b8a6';
+  const top=new THREE.Shape();top.moveTo(-a/2,-a/2);top.lineTo(a/2,-a/2);top.lineTo(a/2,a/2);top.lineTo(-a/2,a/2);top.lineTo(-a/2,-a/2);
+  const hole=new THREE.Path();hole.absarc(0,0,r,0,PI2,true);top.holes.push(hole);
+  const tg=new THREE.ShapeGeometry(top,SEG);tg.rotateX(-Math.PI/2);
+  const body=[
+    {id:'top',label:'Top face (with circular hole)',geo:tg,pos:[0,a/2,0],color:mix(c,'#ffffff',.25),counted:true},
+    {id:'bottom',label:'Bottom face',geo:G.plane(a,a,Math.PI/2),pos:[0,-a/2,0],color:mix(c,'#000000',.12),counted:true},
+    {id:'front',label:'Front face',geo:G.plane(a,a),pos:[0,0,a/2],color:c,counted:true},
+    {id:'back',label:'Back face',geo:G.plane(a,a,0,Math.PI),pos:[0,0,-a/2],color:c,counted:true},
+    {id:'right',label:'Right face',geo:G.plane(a,a,0,Math.PI/2),pos:[a/2,0,0],color:mix(c,'#000000',.08),counted:true},
+    {id:'left',label:'Left face',geo:G.plane(a,a,0,-Math.PI/2),pos:[-a/2,0,0],color:mix(c,'#000000',.08),counted:true},
+    {id:'cav',label:'Hemispherical depression',geo:G.bowl(r),pos:[0,a/2,0],color:'#f97316',counted:true}];
+  return{parts:[
+    {pos:[0,0,0],ev:[0,0,0],faces:body,dims:[D('a',[-a/2,-a/2,a/2],[a/2,-a/2,a/2],'a',[0,-1,0]),D('r',[0,a/2,0],[r,a/2,0])]},
+    {pos:[0,0,0],ev:[0,gap,0],ghost:true,faces:ghostFaces([{id:'gD',ghostOf:'cav',geo:G.bowl(r),pos:[0,a/2,0],color:'#f97316'},{id:'gD2',ghostOf:'cav',geo:G.disc(r),pos:[0,a/2,0],color:'#f97316'}])}],dims:[],H:a};
+}
+/* ----- volume lab: three open vessels, h = r ----- */
+function labDef(P){
+  const r=P.r,s=2.5*r,gl='#7dd3fc';
+  const f=(id,label,geo,pos,color)=>({id,label,geo,pos,color,glass:true,counted:true});
+  const faces=[
+    f('vCone','Cone vessel',G.side(r,0,r),[-s,r/2,0],'#60a5fa'),
+    f('vHemi','Hemisphere vessel',G.bowl(r),[0,r,0],'#a78bfa'),
+    f('vCyl','Cylinder vessel',G.side(r,r,r),[s,r/2,0],'#34d399'),
+    f('vCylB','Cylinder base',G.disc(r),[s,0,0],'#34d399'),
+    {id:'liquid',label:'Liquid',geo:new THREE.BufferGeometry(),pos:[0,0,0],color:'#0ea5e9',counted:true,liquidProxy:true}];
+  return{parts:[{pos:[0,0,0],ev:[0,0,0],faces,dims:[
+    D('r',[-s,r,0],[-s+r,r,0]),D('h',[-s,0,0],[-s,r,0],'h'),D('r',[0,r,0],[r,r,0]),D('r',[s,r,0],[s+r,r,0]),D('h',[s+r,0,0],[s+r,r,0],'h')]}],dims:[],H:r,noRecenter:true,lab:true};
+}
+function labPost(res,ctx,P){
+  const r=P.r,s=2.5*r,root=res.root,shells=[],discs=[],planes=[];
+  const mkMat=(clip)=>{const m=new THREE.MeshStandardMaterial({color:ctx.colorOf('liquid','#0ea5e9'),roughness:.15,metalness:0,side:THREE.DoubleSide,transparent:true,opacity:.88});
+    m.userData={liquid:true};(ctx.mats.liquid=ctx.mats.liquid||[]).push(m);if(clip){const pl=new THREE.Plane(new THREE.Vector3(0,-1,0),0);m.clippingPlanes=[pl];planes.push(pl)}return m};
+  const geos=[[G.side(r,0,r),[-s,r/2,0]],[G.bowl(r),[0,r,0]],[G.side(r,r,r),[s,r/2,0]]];
+  geos.forEach(([g,p],i)=>{const m=new THREE.Mesh(g,mkMat(true));m.position.fromArray(p);m.scale.setScalar(.965);m.renderOrder=1;root.add(m);shells.push(m);
+    const d=new THREE.Mesh(new THREE.CircleGeometry(1,SEG),mkMat(false));d.rotation.x=-Math.PI/2;d.position.set(p[0]-(i===1?0:0),0,0);d.renderOrder=1;root.add(d);discs.push(d)});
+  const xs=[-s,0,s];
+  res.lab={update(v){
+    const lv=[r*Math.cbrt(clamp(v.c,0,1)),0,r*clamp(v.y,0,3)/3];
+    let lo=0,hi=1;const t0=clamp(v.m,0,2);for(let i=0;i<30;i++){const t=(lo+hi)/2;(3*t*t-t*t*t<t0)?lo=t:hi=t}lv[1]=r*(lo+hi)/2;
+    const rad=[lv[0],Math.sqrt(Math.max(0,2*r*lv[1]-lv[1]*lv[1])),r];
+    for(let i=0;i<3;i++){const on=lv[i]>.002;shells[i].visible=on;discs[i].visible=on;planes[i].constant=lv[i]+.002;
+      discs[i].position.set(xs[i],lv[i],0);discs[i].scale.setScalar(Math.max(.0001,rad[i]*.965))}
+  }};
+  res.lab.update(LAB);
+}
+
+/* ============ NCERT problem sets: formulas ============ */
+const I=s=>`<i>${s}</i>`,pw=(s,n)=>`${s}<sup>${n}</sup>`,fr=(n,d)=>`<span class="fr"><span>${n}</span><span>${d}</span></span>`;
+const SY={r:I('r'),R:I('R'),h:I('h'),l:I('l'),a:I('a'),b:I('b'),h1:`${I('h')}<sub>1</sub>`};
+const row=(label,sym,sub,val,kind='area',tot)=>({label,sym,sub,val,kind,tot});
+const note=t=>({kind:'note',label:t});
+const sec=(title,rows)=>({title,rows});
+const slant=(X,r,h,hs)=>row('Slant height of the cone',`${SY.l} = √(${pw(SY.r,2)} + ${pw(hs,2)})`,`√(${pw(X.f(r),2)} + ${pw(X.f(h),2)})`,Math.hypot(r,h),'len');
+const prm=(k,label,min,max,step,def,extra={})=>({k,label,min,max,step,def,...extra});
+const RAD=[2.1,3.5,4.2,5.6,7,10.5],HGT=[4,5,6,8,10,12,14],TRI=[[3,4],[6,8],[9,12],[5,12],[7,24],[2.1,2.8],[4.2,5.6],[10.5,14],[3.5,12]];
+const R_=prm('r','radius',1,10,.5,3.5), H_=(k,label,def,min=1,max=16)=>prm(k,label,min,max,.5,def);
+const cone2=()=>{const[r,hc]=pick(TRI);return{r,hc}};
+
+const PRESETS=[
+/* ---------- BASIC ---------- */
+{id:'sphere',g:'Basic solids',name:'Sphere',sub:'Cricket ball, globe, football',params:[prm('r','radius',1,10,.5,3.5)],
+ stack:P=>[{k:'sphere',r:P.r,label:'Sphere'}],
+ story:(P,f)=>`A solid metal sphere has radius <b>${f(P.r)} cm</b>. Find its surface area and its volume.`,
+ idea:`A sphere has <b>one</b> curved surface and no flat face or edge. Its surface area is exactly <b>4 times</b> the area of its great circle (π<i>r</i>²).`,
+ calc:(P,X)=>{const{PI,p,f}=X,r=P.r;return[
+  sec('Surface area',[row('Surface area of the sphere',`4π${pw(SY.r,2)}`,`4 × ${p} × ${pw(f(r),2)}`,4*PI*r*r,'area',1)]),
+  sec('Volume',[row('Volume of the sphere',`${fr(4,3)}π${pw(SY.r,3)}`,`${fr(4,3)} × ${p} × ${pw(f(r),3)}`,4/3*PI*r**3,'vol',1)])]}},
+{id:'hemisphere',g:'Basic solids',name:'Solid hemisphere',sub:'Half a ball, a dome, a bowl turned over',params:[prm('r','radius',1,10,.5,3.5)],
+ stack:P=>[{k:'hemiUp',r:P.r,label:'Hemisphere'}],
+ story:(P,f)=>`A solid hemisphere has radius <b>${f(P.r)} cm</b>. Find its curved surface area, total surface area and volume.`,
+ idea:`A solid hemisphere has <b>two</b> surfaces: the curved one (2π<i>r</i>²) and the flat circular face (π<i>r</i>²). So TSA = <b>3π<i>r</i>²</b>.`,
+ calc:(P,X)=>{const{PI,p,f}=X,r=P.r;return[
+  sec('Surface area',[
+   row('Curved surface area (CSA)',`2π${pw(SY.r,2)}`,`2 × ${p} × ${pw(f(r),2)}`,2*PI*r*r),
+   row('Area of the flat circular face',`π${pw(SY.r,2)}`,`${p} × ${pw(f(r),2)}`,PI*r*r),
+   row('Total surface area (TSA)',`2π${pw(SY.r,2)} + π${pw(SY.r,2)} = 3π${pw(SY.r,2)}`,`3 × ${p} × ${pw(f(r),2)}`,3*PI*r*r,'area',1)]),
+  sec('Volume',[row('Volume of the hemisphere',`${fr(2,3)}π${pw(SY.r,3)}`,`${fr(2,3)} × ${p} × ${pw(f(r),3)}`,2/3*PI*r**3,'vol',1)])]}},
+{id:'cylinder',g:'Basic solids',name:'Cylinder',sub:'Pipe, drum, pillar, tin can',params:[prm('r','radius',1,10,.5,3.5),H_('h','height',8)],
+ stack:P=>[{k:'cyl',r:P.r,h:P.h,label:'Cylinder'}],
+ story:(P,f)=>`A cylindrical drum has base radius <b>${f(P.r)} cm</b> and height <b>${f(P.h)} cm</b>. Find its curved surface area, total surface area and volume.`,
+ idea:`Cut the curved surface and unroll it: it becomes a <b>rectangle</b> of length 2π<i>r</i> and width <i>h</i>, so CSA = 2π<i>rh</i>.`,
+ calc:(P,X)=>{const{PI,p,f}=X,{r,h}=P;return[
+  sec('Surface area',[
+   row('Curved surface area (CSA)',`2π${SY.r}${SY.h}`,`2 × ${p} × ${f(r)} × ${f(h)}`,2*PI*r*h),
+   row('Area of the two circular ends',`2π${pw(SY.r,2)}`,`2 × ${p} × ${pw(f(r),2)}`,2*PI*r*r),
+   row('Total surface area (TSA)',`2π${SY.r}(${SY.r} + ${SY.h})`,`2 × ${p} × ${f(r)} × (${f(r)} + ${f(h)})`,2*PI*r*(r+h),'area',1)]),
+  sec('Volume',[row('Volume of the cylinder',`π${pw(SY.r,2)}${SY.h}`,`${p} × ${pw(f(r),2)} × ${f(h)}`,PI*r*r*h,'vol',1)])]}},
+{id:'cone',g:'Basic solids',name:'Cone',sub:'Ice-cream cone, joker\'s cap, tent',params:[prm('r','radius',1,10,.5,3.5),H_('h','height',12)],
+ stack:P=>[{k:'coneUp',r:P.r,h:P.h,label:'Cone'}],
+ story:(P,f)=>`A cone has base radius <b>${f(P.r)} cm</b> and height <b>${f(P.h)} cm</b>. Find its slant height, curved surface area, total surface area and volume.`,
+ idea:`<i>l</i>² = <i>r</i>² + <i>h</i>² (Pythagoras). A cone holds exactly <b>one third</b> of a cylinder with the same base and height.`,
+ calc:(P,X)=>{const{PI,p,f}=X,{r,h}=P,l=Math.hypot(r,h);return[
+  sec('Slant height',[slant(X,r,h,SY.h)]),
+  sec('Surface area',[
+   row('Curved surface area (CSA)',`π${SY.r}${SY.l}`,`${p} × ${f(r)} × ${f(l)}`,PI*r*l),
+   row('Area of the circular base',`π${pw(SY.r,2)}`,`${p} × ${pw(f(r),2)}`,PI*r*r),
+   row('Total surface area (TSA)',`π${SY.r}(${SY.l} + ${SY.r})`,`${p} × ${f(r)} × (${f(l)} + ${f(r)})`,PI*r*(l+r),'area',1)]),
+  sec('Volume',[row('Volume of the cone',`${fr(1,3)}π${pw(SY.r,2)}${SY.h}`,`${fr(1,3)} × ${p} × ${pw(f(r),2)} × ${f(h)}`,PI*r*r*h/3,'vol',1)])]}},
+{id:'cube',g:'Basic solids',name:'Cube',sub:'Dice, sugar cube, a block',params:[prm('a','edge',1,14,.5,6)],
+ stack:P=>[{k:'cuboid',w:P.a,d:P.a,h:P.a,cube:true,label:'Cube'}],
+ story:(P,f)=>`A cube has edge <b>${f(P.a)} cm</b>. Find its lateral surface area, total surface area and volume.`,
+ idea:`All six faces are equal squares. The 4 side faces make the <b>lateral</b> surface; add the top and bottom for the total.`,
+ calc:(P,X)=>{const{f}=X,a=P.a;return[
+  sec('Surface area',[row('Lateral surface area (LSA)',`4${pw(SY.a,2)}`,`4 × ${pw(f(a),2)}`,4*a*a),row('Total surface area (TSA)',`6${pw(SY.a,2)}`,`6 × ${pw(f(a),2)}`,6*a*a,'area',1)]),
+  sec('Volume',[row('Volume of the cube',pw(SY.a,3),pw(f(a),3),a**3,'vol',1)])]}},
+{id:'cuboid',g:'Basic solids',name:'Cuboid',sub:'Brick, matchbox, classroom',params:[H_('l','length',8,1,16),H_('b','breadth',5,1,16),H_('h','height',4,1,16)],
+ stack:P=>[{k:'cuboid',w:P.l,d:P.b,h:P.h,label:'Cuboid'}],
+ story:(P,f)=>`A cuboid measures <b>${f(P.l)} cm × ${f(P.b)} cm × ${f(P.h)} cm</b>. Find its lateral surface area, total surface area and volume.`,
+ idea:`Opposite faces are equal rectangles, so the six faces come in <b>three pairs</b>: <i>lb</i>, <i>bh</i> and <i>hl</i>.`,
+ calc:(P,X)=>{const{f}=X,{l,b,h}=P;return[
+  sec('Surface area',[row('Lateral surface area (LSA)',`2${SY.h}(${SY.l} + ${SY.b})`,`2 × ${f(h)} × (${f(l)} + ${f(b)})`,2*h*(l+b)),
+   row('Total surface area (TSA)',`2(${SY.l}${SY.b} + ${SY.b}${SY.h} + ${SY.h}${SY.l})`,`2 × (${f(l)}×${f(b)} + ${f(b)}×${f(h)} + ${f(h)}×${f(l)})`,2*(l*b+b*h+h*l),'area',1)]),
+  sec('Volume',[row('Volume of the cuboid',`${SY.l}${SY.b}${SY.h}`,`${f(l)} × ${f(b)} × ${f(h)}`,l*b*h,'vol',1)])]}},
+{id:'frustum',g:'Basic solids',name:'Frustum of a cone',sub:'Bucket, glass, lamp-shade',
+ params:[prm('R','top radius R',1.5,12,.5,7,{min:P=>P.r}),prm('r','bottom radius r',1,12,.5,3.5,{max:P=>P.R}),H_('h','height',8),{k:'open',label:'Open top (bucket)',bool:true,def:true}],
+ stack:P=>[{k:'frustum',rb:P.r,rt:P.R,h:P.h,label:'Frustum'}],
+ post:(res,ctx,P)=>{if(P.open){res.meshes.forEach(m=>{if(m.userData.surf==='0.top')m.visible=false})}},
+ story:(P,f)=>`A bucket is in the form of a frustum of a cone. Its top radius is <b>${f(P.R)} cm</b>, bottom radius <b>${f(P.r)} cm</b> and height <b>${f(P.h)} cm</b>. Find the sheet metal needed and the capacity.`,
+ idea:`A frustum is a cone with its top sliced off parallel to the base. A <b>bucket</b> has no top lid, so we leave the top circle out.`,
+ calc:(P,X)=>{const{PI,p,f}=X,{R,r,h}=P,l=Math.sqrt(h*h+(R-r)**2);return[
+  sec('Slant height',[row('Slant height of the frustum',`${SY.l} = √(${pw(SY.h,2)} + (${SY.R} − ${SY.r})<sup>2</sup>)`,`√(${pw(f(h),2)} + (${f(R)} − ${f(r)})<sup>2</sup>)`,l,'len')]),
+  sec('Surface area',[
+   row('Curved surface area (CSA)',`π(${SY.R} + ${SY.r})${SY.l}`,`${p} × (${f(R)} + ${f(r)}) × ${f(l)}`,PI*(R+r)*l),
+   row('Bucket (open top): CSA + base',`π(${SY.R} + ${SY.r})${SY.l} + π${pw(SY.r,2)}`,`${p} × (${f(R)} + ${f(r)}) × ${f(l)} + ${p} × ${pw(f(r),2)}`,PI*(R+r)*l+PI*r*r,'area',P.open),
+   row('Closed frustum (TSA)',`π(${SY.R} + ${SY.r})${SY.l} + π${pw(SY.R,2)} + π${pw(SY.r,2)}`,`${p} × (${f(R)} + ${f(r)}) × ${f(l)} + ${p} × ${pw(f(R),2)} + ${p} × ${pw(f(r),2)}`,PI*(R+r)*l+PI*R*R+PI*r*r,'area',!P.open)]),
+  sec('Volume',[row('Volume of the frustum',`${fr(1,3)}π${SY.h}(${pw(SY.R,2)} + ${pw(SY.r,2)} + ${SY.R}${SY.r})`,`${fr(1,3)} × ${p} × ${f(h)} × (${pw(f(R),2)} + ${pw(f(r),2)} + ${f(R)}×${f(r)})`,PI*h*(R*R+r*r+R*r)/3,'vol',1)])]}},
+
+/* ---------- JOINED ---------- */
+{id:'toy',g:'Joined solids',name:'Cone on a hemisphere',sub:'A toy, a spinning top',params:[R_,H_('hc','cone height h',12)],
+ stack:P=>[{k:'hemiDown',r:P.r,label:'Hemisphere'},{k:'coneUp',r:P.r,h:P.hc,label:'Cone'}],
+ rand:cone2,
+ story:(P,f)=>`A toy is in the form of a cone of radius <b>${f(P.r)} cm</b> mounted on a hemisphere of the same radius. The height of the cone is <b>${f(P.hc)} cm</b>. Find the total surface area and the volume of the toy.`,
+ idea:`Press <b>Separate</b>: the cone's base and the hemisphere's flat face (red) are glued together, so they are <b>hidden</b> and not part of the TSA. TSA of toy ≠ TSA of cone + TSA of hemisphere. Volumes simply add.`,
+ calc:(P,X)=>{const{PI,p,f}=X,{r,hc}=P,l=Math.hypot(r,hc);return[
+  sec('Slant height',[slant(X,r,hc,SY.h)]),
+  sec('Surface area',[
+   row('CSA of the hemisphere',`2π${pw(SY.r,2)}`,`2 × ${p} × ${pw(f(r),2)}`,2*PI*r*r),
+   row('CSA of the cone',`π${SY.r}${SY.l}`,`${p} × ${f(r)} × ${f(l)}`,PI*r*l),
+   row('TSA of the toy',`2π${pw(SY.r,2)} + π${SY.r}${SY.l}`,`2 × ${p} × ${pw(f(r),2)} + ${p} × ${f(r)} × ${f(l)}`,2*PI*r*r+PI*r*l,'area',1)]),
+  sec('Volume',[
+   row('Volume of the hemisphere',`${fr(2,3)}π${pw(SY.r,3)}`,`${fr(2,3)} × ${p} × ${pw(f(r),3)}`,2/3*PI*r**3,'vol'),
+   row('Volume of the cone',`${fr(1,3)}π${pw(SY.r,2)}${SY.h}`,`${fr(1,3)} × ${p} × ${pw(f(r),2)} × ${f(hc)}`,PI*r*r*hc/3,'vol'),
+   row('Volume of the toy',`${fr(2,3)}π${pw(SY.r,3)} + ${fr(1,3)}π${pw(SY.r,2)}${SY.h}`,`sum of the two volumes`,2/3*PI*r**3+PI*r*r*hc/3,'vol',1)])]}},
+{id:'icecream',g:'Joined solids',name:'Hemisphere on a cone',sub:'Ice-cream cone with a scoop',params:[prm('r','radius',1,10,.5,4.2),H_('hc','cone height h',5.6)],
+ stack:P=>[{k:'coneDown',r:P.r,h:P.hc,label:'Cone'},{k:'hemiUp',r:P.r,label:'Hemisphere'}],
+ rand:cone2,
+ story:(P,f)=>`An ice-cream cone of base radius <b>${f(P.r)} cm</b> and height <b>${f(P.hc)} cm</b> is topped with a hemispherical scoop of the same radius. Find the volume of ice cream and the area of the surface that needs wrapping.`,
+ idea:`Same solids as the toy, upside down. The circle where scoop meets cone is <b>inside</b>, so it is not counted in the outer surface.`,
+ calc:(P,X)=>{const{PI,p,f}=X,{r,hc}=P,l=Math.hypot(r,hc);return[
+  sec('Slant height',[slant(X,r,hc,SY.h)]),
+  sec('Surface area',[
+   row('CSA of the cone',`π${SY.r}${SY.l}`,`${p} × ${f(r)} × ${f(l)}`,PI*r*l),
+   row('CSA of the hemisphere',`2π${pw(SY.r,2)}`,`2 × ${p} × ${pw(f(r),2)}`,2*PI*r*r),
+   row('Total outer surface',`π${SY.r}${SY.l} + 2π${pw(SY.r,2)}`,`${p} × ${f(r)} × ${f(l)} + 2 × ${p} × ${pw(f(r),2)}`,PI*r*l+2*PI*r*r,'area',1)]),
+  sec('Volume',[
+   row('Volume of the cone',`${fr(1,3)}π${pw(SY.r,2)}${SY.h}`,`${fr(1,3)} × ${p} × ${pw(f(r),2)} × ${f(hc)}`,PI*r*r*hc/3,'vol'),
+   row('Volume of the hemisphere',`${fr(2,3)}π${pw(SY.r,3)}`,`${fr(2,3)} × ${p} × ${pw(f(r),3)}`,2/3*PI*r**3,'vol'),
+   row('Total volume',`${fr(1,3)}π${pw(SY.r,2)}${SY.h} + ${fr(2,3)}π${pw(SY.r,3)}`,`sum of the two volumes`,PI*r*r*hc/3+2/3*PI*r**3,'vol',1)])]}},
+{id:'dome',g:'Joined solids',name:'Hemisphere on a cylinder',sub:'A silo, a domed tower, a test tube',params:[prm('r','radius',1,10,.5,3.5),H_('h','cylinder height h',7)],
+ stack:P=>[{k:'cyl',r:P.r,h:P.h,label:'Cylinder'},{k:'hemiUp',r:P.r,label:'Hemisphere'}],
+ story:(P,f)=>`A vessel is a cylinder of radius <b>${f(P.r)} cm</b> and height <b>${f(P.h)} cm</b>, surmounted by a hemisphere of the same radius. Find its total surface area and its volume.`,
+ idea:`The top circle of the cylinder and the flat face of the hemisphere vanish at the joint. What remains: <b>cylinder CSA + bottom circle + hemisphere CSA</b>.`,
+ calc:(P,X)=>{const{PI,p,f}=X,{r,h}=P;return[
+  sec('Surface area',[
+   row('CSA of the cylinder',`2π${SY.r}${SY.h}`,`2 × ${p} × ${f(r)} × ${f(h)}`,2*PI*r*h),
+   row('Bottom circle of the cylinder',`π${pw(SY.r,2)}`,`${p} × ${pw(f(r),2)}`,PI*r*r),
+   row('CSA of the hemisphere',`2π${pw(SY.r,2)}`,`2 × ${p} × ${pw(f(r),2)}`,2*PI*r*r),
+   row('Total surface area (TSA)',`2π${SY.r}${SY.h} + 3π${pw(SY.r,2)}`,`2 × ${p} × ${f(r)} × ${f(h)} + 3 × ${p} × ${pw(f(r),2)}`,2*PI*r*h+3*PI*r*r,'area',1)]),
+  sec('Volume',[
+   row('Volume of the cylinder',`π${pw(SY.r,2)}${SY.h}`,`${p} × ${pw(f(r),2)} × ${f(h)}`,PI*r*r*h,'vol'),
+   row('Volume of the hemisphere',`${fr(2,3)}π${pw(SY.r,3)}`,`${fr(2,3)} × ${p} × ${pw(f(r),3)}`,2/3*PI*r**3,'vol'),
+   row('Total volume',`π${pw(SY.r,2)}${SY.h} + ${fr(2,3)}π${pw(SY.r,3)}`,`sum of the two volumes`,PI*r*r*h+2/3*PI*r**3,'vol',1)])]}},
+{id:'capsule',g:'Joined solids',name:'Capsule (cylinder + 2 hemispheres)',sub:'Medicine capsule, gulab jamun, oil tank',params:[prm('r','radius',1,6,.5,2.1),H_('h','cylinder height h',5.6)],
+ stack:P=>[{k:'hemiDown',r:P.r,label:'Bottom hemisphere'},{k:'cyl',r:P.r,h:P.h,label:'Cylinder'},{k:'hemiUp',r:P.r,label:'Top hemisphere'}],
+ story:(P,f)=>`A capsule is a cylinder of radius <b>${f(P.r)} cm</b> and length <b>${f(P.h)} cm</b> with a hemisphere fixed at each end. Find the total surface area of the capsule and its volume.`,
+ idea:`Two hemispheres of the same radius make <b>one full sphere</b>: 4π<i>r</i>² for area and (4/3)π<i>r</i>³ for volume. Both circular faces of the cylinder are hidden.`,
+ calc:(P,X)=>{const{PI,p,f}=X,{r,h}=P;return[
+  sec('Surface area',[
+   row('CSA of the cylinder',`2π${SY.r}${SY.h}`,`2 × ${p} × ${f(r)} × ${f(h)}`,2*PI*r*h),
+   row('CSA of the two hemispheres',`2 × 2π${pw(SY.r,2)} = 4π${pw(SY.r,2)}`,`4 × ${p} × ${pw(f(r),2)}`,4*PI*r*r),
+   row('Total surface area (TSA)',`2π${SY.r}${SY.h} + 4π${pw(SY.r,2)}`,`2 × ${p} × ${f(r)} × ${f(h)} + 4 × ${p} × ${pw(f(r),2)}`,2*PI*r*h+4*PI*r*r,'area',1)]),
+  sec('Volume',[
+   row('Volume of the cylinder',`π${pw(SY.r,2)}${SY.h}`,`${p} × ${pw(f(r),2)} × ${f(h)}`,PI*r*r*h,'vol'),
+   row('Volume of the two hemispheres',`${fr(4,3)}π${pw(SY.r,3)}`,`${fr(4,3)} × ${p} × ${pw(f(r),3)}`,4/3*PI*r**3,'vol'),
+   row('Total volume',`π${pw(SY.r,2)}${SY.h} + ${fr(4,3)}π${pw(SY.r,3)}`,`sum of the two volumes`,PI*r*r*h+4/3*PI*r**3,'vol',1)])]}},
+{id:'tent',g:'Joined solids',name:'Cone on a cylinder',sub:'A tent, a rocket, a pencil tip',params:[prm('r','radius',1,10,.5,4.2),H_('h','cylinder height h',5),H_('hc','cone height h₁',5.6)],
+ stack:P=>[{k:'cyl',r:P.r,h:P.h,label:'Cylinder'},{k:'coneUp',r:P.r,h:P.hc,hs:'h₁',label:'Cone'}],
+ rand:()=>({...cone2(),h:pick(HGT)}),
+ story:(P,f)=>`A tent is a cylinder of radius <b>${f(P.r)} m</b> and height <b>${f(P.h)} m</b>, surmounted by a cone of the same radius and height <b>${f(P.hc)} m</b>. Find the area of canvas used and the air inside.`,
+ idea:`A tent has no floor circle counted at the top: the cylinder's top and the cone's base are joined. Canvas = <b>CSA of cylinder + CSA of cone</b> (floor excluded).`,
+ calc:(P,X)=>{const{PI,p,f}=X,{r,h,hc}=P,l=Math.hypot(r,hc);return[
+  sec('Slant height',[slant(X,r,hc,SY.h1)]),
+  sec('Surface area',[
+   row('CSA of the cylinder',`2π${SY.r}${SY.h}`,`2 × ${p} × ${f(r)} × ${f(h)}`,2*PI*r*h),
+   row('CSA of the cone',`π${SY.r}${SY.l}`,`${p} × ${f(r)} × ${f(l)}`,PI*r*l),
+   row('Canvas (no floor)',`2π${SY.r}${SY.h} + π${SY.r}${SY.l}`,`sum of the two CSAs`,2*PI*r*h+PI*r*l,'area',1),
+   row('If the bottom circle is also counted (TSA)',`2π${SY.r}${SY.h} + π${SY.r}${SY.l} + π${pw(SY.r,2)}`,`canvas + ${p} × ${pw(f(r),2)}`,2*PI*r*h+PI*r*l+PI*r*r,'area')]),
+  sec('Volume',[
+   row('Volume of the cylinder',`π${pw(SY.r,2)}${SY.h}`,`${p} × ${pw(f(r),2)} × ${f(h)}`,PI*r*r*h,'vol'),
+   row('Volume of the cone',`${fr(1,3)}π${pw(SY.r,2)}${SY.h1}`,`${fr(1,3)} × ${p} × ${pw(f(r),2)} × ${f(hc)}`,PI*r*r*hc/3,'vol'),
+   row('Total volume',`π${pw(SY.r,2)}${SY.h} + ${fr(1,3)}π${pw(SY.r,2)}${SY.h1}`,`sum of the two volumes`,PI*r*r*h+PI*r*r*hc/3,'vol',1)])]}},
+{id:'triple',g:'Joined solids',name:'Cone + cylinder + hemisphere',sub:'A rocket, a toy, a medicine bottle',params:[prm('r','radius',1,8,.5,2.1),H_('h','cylinder height h',5),H_('hc','cone height h₁',2.8)],
+ stack:P=>[{k:'hemiDown',r:P.r,label:'Hemisphere'},{k:'cyl',r:P.r,h:P.h,label:'Cylinder'},{k:'coneUp',r:P.r,h:P.hc,hs:'h₁',label:'Cone'}],
+ rand:()=>({...cone2(),h:pick(HGT)}),
+ story:(P,f)=>`A rocket toy is a cylinder of radius <b>${f(P.r)} cm</b> and height <b>${f(P.h)} cm</b> with a cone of height <b>${f(P.hc)} cm</b> on top and a hemisphere underneath, all of the same radius. Find the total surface area and volume.`,
+ idea:`Three solids, <b>four</b> hidden faces. Only the three curved surfaces make the outside: hemisphere + cylinder + cone.`,
+ calc:(P,X)=>{const{PI,p,f}=X,{r,h,hc}=P,l=Math.hypot(r,hc);return[
+  sec('Slant height',[slant(X,r,hc,SY.h1)]),
+  sec('Surface area',[
+   row('CSA of the hemisphere',`2π${pw(SY.r,2)}`,`2 × ${p} × ${pw(f(r),2)}`,2*PI*r*r),
+   row('CSA of the cylinder',`2π${SY.r}${SY.h}`,`2 × ${p} × ${f(r)} × ${f(h)}`,2*PI*r*h),
+   row('CSA of the cone',`π${SY.r}${SY.l}`,`${p} × ${f(r)} × ${f(l)}`,PI*r*l),
+   row('Total surface area (TSA)',`2π${pw(SY.r,2)} + 2π${SY.r}${SY.h} + π${SY.r}${SY.l}`,`sum of the three CSAs`,2*PI*r*r+2*PI*r*h+PI*r*l,'area',1)]),
+  sec('Volume',[
+   row('Volume of the hemisphere',`${fr(2,3)}π${pw(SY.r,3)}`,`${fr(2,3)} × ${p} × ${pw(f(r),3)}`,2/3*PI*r**3,'vol'),
+   row('Volume of the cylinder',`π${pw(SY.r,2)}${SY.h}`,`${p} × ${pw(f(r),2)} × ${f(h)}`,PI*r*r*h,'vol'),
+   row('Volume of the cone',`${fr(1,3)}π${pw(SY.r,2)}${SY.h1}`,`${fr(1,3)} × ${p} × ${pw(f(r),2)} × ${f(hc)}`,PI*r*r*hc/3,'vol'),
+   row('Total volume',`${fr(2,3)}π${pw(SY.r,3)} + π${pw(SY.r,2)}${SY.h} + ${fr(1,3)}π${pw(SY.r,2)}${SY.h1}`,`sum of the three volumes`,2/3*PI*r**3+PI*r*r*h+PI*r*r*hc/3,'vol',1)])]}},
+{id:'cubehemi',g:'Joined solids',name:'Hemisphere on a cube',sub:'A decorative block, a gate-post',params:[prm('a','edge of cube a',2,14,.5,7),prm('r','hemisphere radius r',1,7,.5,3.5,{max:P=>P.a/2})],
+ stack:P=>[{k:'cuboid',w:P.a,d:P.a,h:P.a,cube:true,partialTop:true,label:'Cube'},{k:'hemiUp',r:P.r,label:'Hemisphere'}],
+ rand:()=>({a:pick([7,8,10,14]),r:pick([3.5,2.1,4,5,7])}),
+ story:(P,f)=>`A cubical block of side <b>${f(P.a)} cm</b> is surmounted by a hemisphere of radius <b>${f(P.r)} cm</b> (the largest-ish that fits on the top face). Find the total surface area and the volume of the solid.`,
+ idea:`The hemisphere <b>covers a circle</b> of the cube's top face, so that circle (π<i>r</i>²) is lost, but the hemisphere's curved surface (2π<i>r</i>²) is gained. Net: TSA = 6<i>a</i>² + π<i>r</i>².`,
+ calc:(P,X)=>{const{PI,p,f}=X,{a,r}=P;return[
+  sec('Surface area',[
+   row('TSA of the cube',`6${pw(SY.a,2)}`,`6 × ${pw(f(a),2)}`,6*a*a),
+   row('Circle of the top face covered',`π${pw(SY.r,2)}`,`${p} × ${pw(f(r),2)}`,PI*r*r),
+   row('CSA of the hemisphere',`2π${pw(SY.r,2)}`,`2 × ${p} × ${pw(f(r),2)}`,2*PI*r*r),
+   row('Total surface area (TSA)',`6${pw(SY.a,2)} − π${pw(SY.r,2)} + 2π${pw(SY.r,2)} = 6${pw(SY.a,2)} + π${pw(SY.r,2)}`,`6 × ${pw(f(a),2)} + ${p} × ${pw(f(r),2)}`,6*a*a+PI*r*r,'area',1)]),
+  sec('Volume',[
+   row('Volume of the cube',pw(SY.a,3),pw(f(a),3),a**3,'vol'),
+   row('Volume of the hemisphere',`${fr(2,3)}π${pw(SY.r,3)}`,`${fr(2,3)} × ${p} × ${pw(f(r),3)}`,2/3*PI*r**3,'vol'),
+   row('Total volume',`${pw(SY.a,3)} + ${fr(2,3)}π${pw(SY.r,3)}`,`sum of the two volumes`,a**3+2/3*PI*r**3,'vol',1)])]}},
+
+/* ---------- HOLLOW ---------- */
+{id:'scoops',g:'Scooped out',name:'Cylinder with hemispherical ends scooped out',sub:'A wooden article, a pencil-stand',
+ params:[prm('r','radius',1,6,.5,3.5,{max:P=>P.h/2}),prm('h','cylinder height h',2,16,.5,10,{min:P=>2*P.r})],build:scoopsDef,
+ story:(P,f)=>`A wooden article was made by scooping out a hemisphere from <b>each end</b> of a solid cylinder of height <b>${f(P.h)} cm</b> and radius <b>${f(P.r)} cm</b>. Find the total surface area and the volume of the article.`,
+ idea:`Scooping removes volume but <b>adds</b> new inner curved surfaces. Press <b>Separate</b> to see the two hemispheres that were removed. Volume = cylinder − 2 hemispheres.`,
+ calc:(P,X)=>{const{PI,p,f}=X,{r,h}=P;return[
+  sec('Surface area',[
+   row('CSA of the cylinder',`2π${SY.r}${SY.h}`,`2 × ${p} × ${f(r)} × ${f(h)}`,2*PI*r*h),
+   row('Inner surface of 2 hemispherical cavities',`2 × 2π${pw(SY.r,2)} = 4π${pw(SY.r,2)}`,`4 × ${p} × ${pw(f(r),2)}`,4*PI*r*r),
+   row('Total surface area (TSA)',`2π${SY.r}${SY.h} + 4π${pw(SY.r,2)}`,`sum of the two areas`,2*PI*r*h+4*PI*r*r,'area',1)]),
+  sec('Volume',[
+   row('Volume of the cylinder',`π${pw(SY.r,2)}${SY.h}`,`${p} × ${pw(f(r),2)} × ${f(h)}`,PI*r*r*h,'vol'),
+   row('Volume of the two hemispheres removed',`${fr(4,3)}π${pw(SY.r,3)}`,`${fr(4,3)} × ${p} × ${pw(f(r),3)}`,4/3*PI*r**3,'vol'),
+   row('Volume of the article',`π${pw(SY.r,2)}${SY.h} − ${fr(4,3)}π${pw(SY.r,3)}`,`cylinder − hemispheres`,PI*r*r*h-4/3*PI*r**3,'vol',1)])]}},
+{id:'conecav',g:'Scooped out',name:'Cylinder with a conical cavity',sub:'A wooden toy, a funnel-shaped holder',
+ params:[prm('r','radius',1,8,.5,3.5),prm('h','cylinder height h',2,16,.5,12,{}),prm('hc','cone height h₁',1,16,.5,12,{max:P=>P.h})],build:coneCavDef,
+ rand:()=>{const[r,hc]=pick(TRI);return{r,hc,h:hc}},
+ story:(P,f)=>`From a solid cylinder of height <b>${f(P.h)} cm</b> and base radius <b>${f(P.r)} cm</b>, a conical cavity of the same radius and height <b>${f(Math.min(P.hc,P.h))} cm</b> is hollowed out. Find the total surface area and volume of the remaining solid.`,
+ idea:`The cone is removed from the <b>top</b>, so the top circle disappears and the cone's slanted surface becomes a new <b>inner</b> surface. Volume = cylinder − cone.`,
+ calc:(P,X)=>{const{PI,p,f}=X,{r,h}=P,hc=Math.min(P.hc,h),l=Math.hypot(r,hc);return[
+  sec('Slant height',[slant(X,r,hc,SY.h1)]),
+  sec('Surface area',[
+   row('CSA of the cylinder',`2π${SY.r}${SY.h}`,`2 × ${p} × ${f(r)} × ${f(h)}`,2*PI*r*h),
+   row('Bottom circle',`π${pw(SY.r,2)}`,`${p} × ${pw(f(r),2)}`,PI*r*r),
+   row('CSA of the conical cavity',`π${SY.r}${SY.l}`,`${p} × ${f(r)} × ${f(l)}`,PI*r*l),
+   row('Total surface area (TSA)',`2π${SY.r}${SY.h} + π${pw(SY.r,2)} + π${SY.r}${SY.l}`,`sum of the three areas`,2*PI*r*h+PI*r*r+PI*r*l,'area',1)]),
+  sec('Volume',[
+   row('Volume of the cylinder',`π${pw(SY.r,2)}${SY.h}`,`${p} × ${pw(f(r),2)} × ${f(h)}`,PI*r*r*h,'vol'),
+   row('Volume of the cone removed',`${fr(1,3)}π${pw(SY.r,2)}${SY.h1}`,`${fr(1,3)} × ${p} × ${pw(f(r),2)} × ${f(hc)}`,PI*r*r*hc/3,'vol'),
+   row('Volume of the remaining solid',`π${pw(SY.r,2)}${SY.h} − ${fr(1,3)}π${pw(SY.r,2)}${SY.h1}`,`cylinder − cone`,PI*r*r*h-PI*r*r*hc/3,'vol',1)])]}},
+{id:'cubedep',g:'Scooped out',name:'Cube with a hemispherical depression',sub:'A decorative block, a paper-weight',
+ params:[prm('a','edge of cube a',2,14,.5,7),prm('r','depression radius r',1,7,.5,3.5,{max:P=>P.a/2})],build:cubeDepDef,
+ rand:()=>({a:pick([7,8,10,14]),r:pick([3.5,2.1,4,5])}),
+ story:(P,f)=>`A decorative block is a cube of side <b>${f(P.a)} cm</b> with a hemispherical depression of radius <b>${f(P.r)} cm</b> cut into the top face. Find its total surface area and volume.`,
+ idea:`Depression: the circle on the top face is <b>lost</b> (−π<i>r</i>²) and the inner hemisphere is <b>gained</b> (+2π<i>r</i>²). The surface area goes <b>up</b>, the volume goes down.`,
+ calc:(P,X)=>{const{PI,p,f}=X,{a,r}=P;return[
+  sec('Surface area',[
+   row('TSA of the cube',`6${pw(SY.a,2)}`,`6 × ${pw(f(a),2)}`,6*a*a),
+   row('Circle removed from the top face',`π${pw(SY.r,2)}`,`${p} × ${pw(f(r),2)}`,PI*r*r),
+   row('Inner CSA of the hemisphere',`2π${pw(SY.r,2)}`,`2 × ${p} × ${pw(f(r),2)}`,2*PI*r*r),
+   row('Total surface area (TSA)',`6${pw(SY.a,2)} − π${pw(SY.r,2)} + 2π${pw(SY.r,2)} = 6${pw(SY.a,2)} + π${pw(SY.r,2)}`,`6 × ${pw(f(a),2)} + ${p} × ${pw(f(r),2)}`,6*a*a+PI*r*r,'area',1)]),
+  sec('Volume',[
+   row('Volume of the cube',pw(SY.a,3),pw(f(a),3),a**3,'vol'),
+   row('Volume of the hemisphere removed',`${fr(2,3)}π${pw(SY.r,3)}`,`${fr(2,3)} × ${p} × ${pw(f(r),3)}`,2/3*PI*r**3,'vol'),
+   row('Volume of the block',`${pw(SY.a,3)} − ${fr(2,3)}π${pw(SY.r,3)}`,`cube − hemisphere`,a**3-2/3*PI*r**3,'vol',1)])]}},
+
+/* ---------- LAB ---------- */
+{id:'lab',g:'Volume lab',name:'Pour and compare (1 : 2 : 3)',sub:'Cone, hemisphere and cylinder with the same r and h = r',lab:true,
+ params:[prm('r','radius (h = r)',1,6,.5,3,{})],build:labDef,post:labPost,
+ story:(P,f)=>`A cone, a hemisphere and a cylinder have the <b>same radius ${f(P.r)} cm</b>, and the cone and cylinder are as tall as they are wide (<i>h</i> = <i>r</i>). Fill the cone and pour it into the others. How many cones fill the hemisphere? And the cylinder?`,
+ idea:`With <i>h</i> = <i>r</i>: cone = ⅓π<i>r</i>³, hemisphere = ⅔π<i>r</i>³, cylinder = π<i>r</i>³. Volumes are in the ratio <b>1 : 2 : 3</b>. This was Archimedes' favourite result.`,
+ calc:(P,X)=>{const{PI,p,f}=X,r=P.r;return[
+  sec('Volumes (with h = r)',[
+   row('Cone',`${fr(1,3)}π${pw(SY.r,2)}${SY.h} = ${fr(1,3)}π${pw(SY.r,3)}`,`${fr(1,3)} × ${p} × ${pw(f(r),3)}`,PI*r**3/3,'vol'),
+   row('Hemisphere',`${fr(2,3)}π${pw(SY.r,3)}`,`${fr(2,3)} × ${p} × ${pw(f(r),3)}`,2*PI*r**3/3,'vol'),
+   row('Cylinder',`π${pw(SY.r,2)}${SY.h} = π${pw(SY.r,3)}`,`${p} × ${pw(f(r),3)}`,PI*r**3,'vol'),
+   note('Cone : Hemisphere : Cylinder = ⅓ : ⅔ : 1 = 1 : 2 : 3')])]}}
+];
+const PR=id=>PRESETS.find(p=>p.id===id);
+/* ---- (continued in b_scene.js, c_ui.js, d_ink.js; one closure) ---- */
+
+/* ============ THREE scene ============ */
+const HK={};   // hooks filled in by the UI layer
+const stage=$('#stage'),cv=$('#gl');
+const isDark=()=>{const t=document.documentElement.dataset.theme;return t?t==='dark':matchMedia('(prefers-color-scheme: dark)').matches};
+const renderer=new THREE.WebGLRenderer({canvas:cv,antialias:true,alpha:true,preserveDrawingBuffer:true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+renderer.localClippingEnabled=true;
+const scene=new THREE.Scene();
+const camera=new THREE.PerspectiveCamera(38,1,.1,2000);
+scene.add(new THREE.AmbientLight(0xffffff,.36));
+scene.add(new THREE.HemisphereLight(0xffffff,0x8a94b8,.3));
+const key=new THREE.DirectionalLight(0xffffff,.58);scene.add(key);
+const fill=new THREE.DirectionalLight(0xbcd0ff,.22);scene.add(fill);
+const LINE=new THREE.LineBasicMaterial({color:0x0f1729,transparent:true,opacity:.5});
+function refreshLine(){const d=isDark();LINE.color.set(d?0xffffff:0x0f1729);LINE.opacity=d?.38:.5}
+refreshLine();
+
+/* camera orbit state */
+const cam={theta:.62,phi:1.12,dist:30,target:new THREE.Vector3(),fit:10,auto:false};
+function applyCam(){const s=Math.sin(cam.phi);
+  camera.position.set(cam.target.x+cam.dist*s*Math.sin(cam.theta),cam.target.y+cam.dist*Math.cos(cam.phi),cam.target.z+cam.dist*s*Math.cos(cam.theta));
+  camera.lookAt(cam.target);key.position.copy(camera.position).add(new THREE.Vector3(cam.dist*.4,cam.dist*.7,cam.dist*.2));fill.position.copy(camera.position).add(new THREE.Vector3(-cam.dist*.8,-cam.dist*.2,cam.dist*.3));}
+const tweens=[];
+function tween(ms,fn,done,tag){tweens.push({t0:performance.now(),ms,fn,done,tag})}
+const ease=u=>u<.5?2*u*u:1-Math.pow(-2*u+2,2)/2;
+function camTo(to,ms=650){for(let i=tweens.length-1;i>=0;i--)if(tweens[i].tag==='cam')tweens.splice(i,1);const f={t:cam.theta,p:cam.phi,d:cam.dist},tt=to.theta!=null?to.theta:f.t,pp=to.phi!=null?to.phi:f.p,dd=to.dist!=null?to.dist:f.d;
+  let dt=tt-f.t;dt=Math.atan2(Math.sin(dt),Math.cos(dt));
+  tween(ms,e=>{cam.theta=f.t+dt*e;cam.phi=f.p+(pp-f.p)*e;cam.dist=f.d+(dd-f.d)*e},null,'cam')}
+function fitDist(){const asp=camera.aspect||1;return cam.fit*1.3/Math.tan(THREE.MathUtils.degToRad(camera.fov/2)*Math.min(1,asp*.95))}
+
+/* ground shadow */
+const gtex=(()=>{const c=document.createElement('canvas');c.width=c.height=128;const g=c.getContext('2d'),gr=g.createRadialGradient(64,64,4,64,64,64);gr.addColorStop(0,'rgba(0,0,0,.42)');gr.addColorStop(.6,'rgba(0,0,0,.14)');gr.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=gr;g.fillRect(0,0,128,128);return new THREE.CanvasTexture(c)})();
+const ground=new THREE.Mesh(new THREE.PlaneGeometry(1,1),new THREE.MeshBasicMaterial({map:gtex,transparent:true,depthWrite:false}));
+ground.rotation.x=-Math.PI/2;ground.renderOrder=-1;scene.add(ground);
+
+/* ---------- label sprites and dimension lines ---------- */
+const DIMCOL={r:'#e11d48',h:'#2563eb',l:'#d97706',a:'#0f766e',R:'#e11d48',H:'#7c3aed'};
+function tube(a,b,rad,color){const d=new THREE.Vector3().subVectors(b,a),len=d.length();if(len<1e-6)return null;
+  const m=new THREE.Mesh(new THREE.CylinderGeometry(rad,rad,len,8),new THREE.MeshBasicMaterial({color,depthTest:false,transparent:true,opacity:.95}));
+  m.position.copy(a).addScaledVector(d,.5);m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.normalize());m.renderOrder=10;return m}
+function labelSprite(text,color,h){
+  const c=document.createElement('canvas'),x=c.getContext('2d'),font='700 54px Outfit,system-ui,sans-serif';x.font=font;
+  const w=Math.ceil(x.measureText(text).width)+44;c.width=w;c.height=92;x.font=font;
+  x.fillStyle='rgba(255,255,255,.96)';x.strokeStyle=color;x.lineWidth=6;x.beginPath();
+  if(x.roundRect)x.roundRect(4,4,w-8,84,22);else x.rect(4,4,w-8,84);x.fill();x.stroke();
+  x.fillStyle=color;x.textBaseline='middle';x.textAlign='center';x.fillText(text,w/2,48);
+  const t=new THREE.CanvasTexture(c);t.minFilter=THREE.LinearFilter;
+  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:t,depthTest:false,transparent:true}));
+  sp.scale.set(h*w/92,h,1);sp.renderOrder=11;return sp}
+
+/* ---------- build a definition into three.js objects ---------- */
+function instantiate(def,ctx,P){
+  const root=new THREE.Group(),parts=[],surfaces=[],meshes=[];
+  def.parts.forEach((pd,i)=>{
+    const g=new THREE.Group(),base=V3(pd.pos||[0,0,0]);g.position.copy(base);
+    const part={g,base,ev:V3(pd.ev||[0,0,0]),ghost:!!pd.ghost,mats:[],dimG:null};
+    pd.faces.forEach(fc=>{
+      if(fc.liquidProxy){surfaces.push({id:fc.id,label:fc.label,counted:true,color:fc.color,noTag:true});return}
+      let mat;
+      if(fc.ghost){mat=new THREE.MeshStandardMaterial({color:ctx.colorOf(fc.ghostOf,fc.color),transparent:true,opacity:0,roughness:.5,side:THREE.DoubleSide,depthWrite:false});
+        mat.userData={ghost:true};(ctx.mats[fc.ghostOf]=ctx.mats[fc.ghostOf]||[]).push(mat);part.mats.push(mat)}
+      else{mat=new THREE.MeshStandardMaterial({color:ctx.colorOf(fc.id,fc.color),roughness:.38,metalness:.04,side:THREE.DoubleSide});
+        mat.userData={glass:!!fc.glass};(ctx.mats[fc.id]=ctx.mats[fc.id]||[]).push(mat)}
+      const m=new THREE.Mesh(fc.geo,mat);m.position.fromArray(fc.pos||[0,0,0]);m.userData={surf:fc.id,ghost:!!fc.ghost};
+      if(fc.glass)m.renderOrder=2;
+      if(!fc.ghost&&ctx.outline)m.add(new THREE.LineSegments(new THREE.EdgesGeometry(fc.geo,35),LINE));
+      g.add(m);meshes.push(m);
+      if(!fc.ghost)surfaces.push({id:fc.id,label:fc.label,counted:fc.counted!==false,color:fc.color,joint:!!fc.joint,noTag:!!def.lab});
+    });
+    if(part.ghost)g.visible=false;
+    root.add(g);parts.push(part);
+  });
+  const res={root,parts,surfaces,meshes,dimGroups:[],globalDim:null};
+  const box=new THREE.Box3().setFromObject(root);res.box=box;
+  {const sz=box.getSize(new THREE.Vector3());res.fit=Math.max(Math.hypot(sz.x,sz.y,sz.z*.4)/2,1)}
+  return res;
+}
+function addDims(res,def,ctx){
+  const fit=res.fit;
+  const mk=(d,parent)=>{const a=V3(d.a),b=V3(d.b),col=DIMCOL[d.kind]||'#0f766e',grp=new THREE.Group(),len=a.distanceTo(b);
+    const t=tube(a,b,fit*.011,col);if(t)grp.add(t);
+    [a,b].forEach(p=>{const s=new THREE.Mesh(new THREE.SphereGeometry(fit*.02,12,8),new THREE.MeshBasicMaterial({color:col,depthTest:false}));s.position.copy(p);s.renderOrder=10;grp.add(s)});
+    const mid=a.clone().add(b).multiplyScalar(.5).addScaledVector(V3(d.o||[0,0,0]),fit*.09);
+    const sp=labelSprite(ctx.vals?`${d.sym} = ${fmt(len)} ${ctx.unit}`:d.sym,col,fit*.095);sp.position.copy(mid);grp.add(sp);parent.add(grp);return grp};
+  def.parts.forEach((pd,i)=>{const grp=new THREE.Group();grp.visible=ctx.dims;res.parts[i].g.add(grp);(pd.dims||[]).forEach(d=>mk(d,grp));res.dimGroups.push(grp)});
+  const gg=new THREE.Group();gg.visible=ctx.dims;res.root.add(gg);(def.dims||[]).forEach(d=>mk(d,gg));res.globalDim=gg;
+}
+function disposeObj(o){o.traverse(n=>{if(n.geometry)n.geometry.dispose();if(n.material){(Array.isArray(n.material)?n.material:[n.material]).forEach(m=>{if(m.map)m.map.dispose();m.dispose()})}})}
+
+/* ---------- current model ---------- */
+let cur=null;
+function matList(){const out=[];if(cur)Object.values(cur.ctx.mats).forEach(a=>a.forEach(m=>out.push(m)));return out}
+function styleAll(){matList().forEach(m=>{const u=m.userData;if(u.ghost)return;
+  const base=u.liquid?.88:(u.glass?.26:1),op=u.liquid?base:base*S.opacity;
+  m.opacity=op;m.transparent=op<.999;m.depthWrite=!m.transparent;m.wireframe=!!S.wire&&!u.liquid;m.needsUpdate=true});}
+const clipPlane=new THREE.Plane(new THREE.Vector3(-1,0,0),0);
+function applyClip(){
+  if(!S.clip.on){renderer.clippingPlanes=[];return}
+  const ax=S.clip.axis,n=new THREE.Vector3(),sgn=S.clip.flip?-1:1;n[ax]=-sgn;
+  const bx=cur?cur.res.box:null,half=bx?(bx.max[ax]-bx.min[ax])/2:5,c=bx?(bx.max[ax]+bx.min[ax])/2:0;
+  clipPlane.normal.copy(n);clipPlane.constant=sgn*(c+S.clip.pos/100*half);
+  // keep points with normal.p + const >= 0  ->  sgn*(c+pos)-sgn*p >= 0
+  renderer.clippingPlanes=[clipPlane];
+}
+function applyExplode(){
+  if(!cur)return;const e=S.explode;
+  cur.res.parts.forEach(p=>{p.g.position.copy(p.base).addScaledVector(p.ev,e);
+    if(p.ghost){p.g.visible=e>.02;p.mats.forEach(m=>{m.opacity=Math.min(.62,e*1.6)})}});
+  if(cur.res.globalDim)cur.res.globalDim.visible=S.dims&&e<.04;
+}
+function updateGround(){const r=cur.res,sz=r.box.getSize(new THREE.Vector3()),span=Math.max(sz.x,sz.z)*2.1+r.fit*.3;
+  ground.scale.set(span,span,1);ground.position.set((r.box.min.x+r.box.max.x)/2,r.box.min.y-.03,(r.box.min.z+r.box.max.z)/2)}
+
+function rebuild(opt={}){
+  const pr=PR(S.preset),P=S.params[S.preset];
+  if(cur){scene.remove(cur.res.root);disposeObj(cur.res.root)}
+  const def=pr.stack?stackDef(pr.stack(P)):pr.build(P);
+  const ctx={mats:{},colorOf:(id,d)=>(S.colors[S.preset]||{})[id]||d,outline:S.outline,dims:S.dims,vals:S.vals,unit:S.unit};
+  const res=instantiate(def,ctx,P);
+  if(pr.post)pr.post(res,ctx,P);
+  addDims(res,def,ctx);
+  scene.add(res.root);
+  const prevFit=cur?cur.res.fit:null;
+  cur={pr,def,res,ctx};
+  styleAll();applyExplode();applyClip();updateGround();
+  const ctr=res.box.getCenter(new THREE.Vector3());
+  cam.fit=res.fit;
+  if(opt.refit||!prevFit||res.fit/prevFit>1.45||res.fit/prevFit<.68){cam.target.copy(ctr);camTo({dist:fitDist()},opt.refit?650:350)}
+  else cam.target.copy(ctr);
+  if(HK.rebuilt)HK.rebuilt();
+}
+
+/* ---------- liquid animation (volume lab) ---------- */
+function labTween(target,ms=1300,done){const f={...LAB};tween(ms,e=>{LAB.c=f.c+(target.c-f.c)*e;LAB.m=f.m+(target.m-f.m)*e;LAB.y=f.y+(target.y-f.y)*e;if(cur&&cur.res.lab)cur.res.lab.update(LAB);if(HK.labTick)HK.labTick()},done)}
+const CAP={c:1,m:2,y:3};
+function labFill(k){const t={...LAB};t[k]=CAP[k];labTween(t,1000)}
+function labPour(a,b){const amt=Math.min(LAB[a],CAP[b]-LAB[b]);if(amt<.001)return;const t={...LAB};t[a]-=amt;t[b]+=amt;labTween(t,1500)}
+function labEmpty(){labTween({c:0,m:0,y:0},900)}
+
+/* ---------- highlight ---------- */
+function setHighlight(){/* done in frame loop */}
+
+/* ---------- resize ---------- */
+function resize(){const w=stage.clientWidth,h=stage.clientHeight;if(!w||!h)return;renderer.setSize(w,h,false);camera.aspect=w/h;camera.setViewOffset(w,h,0,Math.round(h*.075),w,h);camera.updateProjectionMatrix();if(HK.resized)HK.resized(w,h)}
+new ResizeObserver(resize).observe(stage);
+
+/* ---------- pointer: orbit / pan / zoom / pick ---------- */
+const ptrs=new Map();let moved=0,downT=0;
+function pan(dx,dy){const k=cam.dist*.0016,right=new THREE.Vector3().setFromMatrixColumn(camera.matrix,0),up=new THREE.Vector3().setFromMatrixColumn(camera.matrix,1);
+  cam.target.addScaledVector(right,-dx*k).addScaledVector(up,dy*k)}
+cv.addEventListener('pointerdown',e=>{cv.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY,b:e.button});if(ptrs.size===1){moved=0;downT=performance.now()}cv.style.cursor='grabbing'});
+cv.addEventListener('pointermove',e=>{const p=ptrs.get(e.pointerId);if(!p)return;const dx=e.clientX-p.x,dy=e.clientY-p.y;
+  if(ptrs.size===1){moved+=Math.abs(dx)+Math.abs(dy);if(p.b===2||e.shiftKey)pan(dx,dy);else{cam.theta-=dx*.0085;cam.phi=clamp(cam.phi-dy*.0085,.04,Math.PI-.04)}}
+  else if(ptrs.size===2){const o=[...ptrs.entries()].find(([id])=>id!==e.pointerId)[1],d0=Math.hypot(p.x-o.x,p.y-o.y),d1=Math.hypot(e.clientX-o.x,e.clientY-o.y);
+    if(d1>0)cam.dist=clamp(cam.dist*d0/d1,cam.fit*.5,cam.fit*14);pan(dx/2,dy/2);moved+=12}
+  p.x=e.clientX;p.y=e.clientY});
+const endp=e=>{const had=ptrs.size===1&&ptrs.has(e.pointerId);ptrs.delete(e.pointerId);cv.style.cursor='grab';
+  if(had&&e.type==='pointerup'&&moved<8&&performance.now()-downT<600)pickAt(e.clientX,e.clientY)};
+cv.addEventListener('pointerup',endp);cv.addEventListener('pointercancel',endp);
+cv.addEventListener('wheel',e=>{e.preventDefault();cam.dist=clamp(cam.dist*Math.exp(e.deltaY*.0012),cam.fit*.5,cam.fit*14)},{passive:false});
+cv.addEventListener('contextmenu',e=>e.preventDefault());
+cv.addEventListener('dblclick',()=>{camTo({theta:.62,phi:1.12,dist:fitDist()});cam.target.copy(cur.res.box.getCenter(new THREE.Vector3()))});
+const ray=new THREE.Raycaster();
+function pickAt(cx,cy){const r=cv.getBoundingClientRect(),ndc=new THREE.Vector2((cx-r.left)/r.width*2-1,-((cy-r.top)/r.height)*2+1);
+  ray.setFromCamera(ndc,camera);
+  const list=cur.res.meshes.filter(m=>m.visible&&m.parent.visible&&!m.userData.ghost&&!m.userData.noPick);
+  const hits=ray.intersectObjects(list,false);
+  let id=null;for(const h of hits){if(S.clip.on&&clipPlane.distanceToPoint(h.point)<0)continue;id=h.object.userData.surf;break}
+  if(HK.select)HK.select(id)}
+
+/* ---------- main loop ---------- */
+function frame(now){
+  requestAnimationFrame(frame);if(document.hidden)return;
+  for(let i=tweens.length-1;i>=0;i--){const t=tweens[i],u=Math.min(1,(now-t.t0)/t.ms);t.fn(ease(u));if(u>=1){tweens.splice(i,1);if(t.done)t.done()}}
+  if(S.spin&&ptrs.size===0)cam.theta+=.0065;
+  applyCam();
+  const sel=S.hover||S.selected,pulse=.18+.3*(Math.sin(now/170)+1)/2;
+  if(cur)Object.entries(cur.ctx.mats).forEach(([id,list])=>{const on=id===sel;list.forEach(m=>{if(m.emissive){if(on){m.emissive.set(0xffffff);m.emissiveIntensity=pulse}else if(m.emissiveIntensity!==0)m.emissiveIntensity=0}})});
+  renderer.render(scene,camera);
+}
+
+/* ---------- thumbnails (rendered from the real geometry) ---------- */
+function makeThumbs(done){
+  let tr;try{tr=new THREE.WebGLRenderer({antialias:true,alpha:true,preserveDrawingBuffer:true})}catch(e){return}
+  tr.setSize(220,220,false);tr.setPixelRatio(1);tr.localClippingEnabled=true;
+  const sc=new THREE.Scene(),cm=new THREE.PerspectiveCamera(36,1,.1,500);
+  sc.add(new THREE.AmbientLight(0xffffff,.7));sc.add(new THREE.HemisphereLight(0xffffff,0x8a94b8,.5));const dl=new THREE.DirectionalLight(0xffffff,.9);dl.position.set(5,10,8);sc.add(dl);
+  const out={};
+  PRESETS.forEach(pr=>{
+    const P={};pr.params.forEach(p=>P[p.k]=p.def);
+    const def=pr.stack?stackDef(pr.stack(P)):pr.build(P);
+    const ctx={mats:{},colorOf:(id,d)=>d,outline:true,dims:false,vals:false,unit:'cm'};
+    const res=instantiate(def,ctx,P);if(pr.post)pr.post(res,ctx,P);
+    Object.values(ctx.mats).flat().forEach(m=>{const u=m.userData;if(u.glass){m.opacity=.35;m.transparent=true}});
+    sc.add(res.root);
+    const c=res.box.getCenter(new THREE.Vector3()),d=res.fit*1.32/Math.tan(THREE.MathUtils.degToRad(18));
+    cm.position.set(c.x+d*.5,c.y+d*.42,c.z+d*.76);cm.lookAt(c);
+    tr.clippingPlanes=[];tr.render(sc,cm);out[pr.id]=tr.domElement.toDataURL('image/png');
+    sc.remove(res.root);disposeObj(res.root);
+  });
+  tr.dispose();try{tr.forceContextLoss()}catch(e){}
+  done(out);
+}
+
+/* ============ UI ============ */
+const el=(tag,attrs={},...kids)=>{const e=document.createElement(tag);for(const[k,v]of Object.entries(attrs)){if(k==='html')e.innerHTML=v;else if(k.startsWith('on'))e.addEventListener(k.slice(2),v);else if(v===false||v==null){}else e.setAttribute(k,v===true?'':v)}kids.flat().forEach(c=>e.append(c));return e};
+const body=$('#tabbody');
+let THUMBS={};
+const sizeInputs={};
+
+PRESETS.forEach(pr=>{S.params[pr.id]={};pr.params.forEach(p=>S.params[pr.id][p.k]=p.def)});
+
+/* ---- toast ---- */
+let toastT;function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2600)}
+
+/* ---- header ---- */
+$('#logo').innerHTML=ic('solid');
+function seg(host,opts,key,cb){host.innerHTML='';opts.forEach(o=>{const b=el('button',{'aria-pressed':S[key]===o},o);b.onclick=()=>{S[key]=o;store.set('sl.'+key,o);$$('button',host).forEach(x=>x.setAttribute('aria-pressed',x.textContent===o));cb()};host.append(b)})}
+seg($('#piSeg'),['22/7','3.14','π'],'pi',()=>{if(S.tab==='math')renderMath()});
+seg($('#unitSeg'),['cm','m','mm'],'unit',()=>{rebuild();if(S.tab==='math')renderMath()});
+function themeBtn(){$('#themeBtn').innerHTML=ic(isDark()?'sun':'moon')+'<span>'+(isDark()?'Light':'Dark')+'</span>'}
+themeBtn();
+$('#themeBtn').onclick=()=>{const d=isDark();document.documentElement.dataset.theme=d?'light':'dark';store.set('sl.theme',d?'light':'dark');themeBtn();refreshLine()};
+{const t=store.get('sl.theme',null);if(t){document.documentElement.dataset.theme=t;themeBtn();refreshLine()}}
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{themeBtn();refreshLine()});
+$('#focusBtn').innerHTML=ic('max')+'<span>Focus</span>';
+$('#focusBtn').onclick=()=>{const on=document.body.classList.toggle('focus');$('#focusBtn').setAttribute('aria-pressed',on);$('#focusBtn span').textContent=on?'Panel':'Focus'};
+$('#fsBtn').innerHTML=ic('fs');
+$('#fsBtn').onclick=()=>{try{document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen().catch(()=>toast('Full screen is not allowed here'))}catch(e){toast('Full screen is not available here')}};
+
+/* ---- stage background ---- */
+const BGS={auto:['Auto',null],white:['White','#ffffff'],cream:['Paper','#f6f0e0'],sky:['Sky','radial-gradient(120% 90% at 50% 20%,#eaf4ff,#b9d6f5)'],board:['Board','radial-gradient(120% 90% at 50% 20%,#2b6b52,#17382c)'],black:['Black','#0b0d14']};
+function applyStageBg(){const c=BGS[S.stageBg]||BGS.auto;stage.style.background=c[1]||''}
+applyStageBg();
+
+/* ---- title + join + views ---- */
+function updateTitle(){const pr=PR(S.preset);$('#title b').textContent=pr.name;$('#title span').textContent=pr.sub}
+function symFor(pr,p){return p.sym||(p.k==='hc'?(pr.params.some(q=>q.k==='h')?'h₁':'h'):p.k)}
+$('#joinBtn').innerHTML=ic('play')+'<span>Animate</span>';
+$('#joinR').oninput=e=>{S.explode=e.target.value/100;applyExplode()};
+$('#joinBtn').onclick=()=>{const to=S.explode>.5?0:1,f=S.explode;tween(1100,e=>{S.explode=f+(to-f)*e;$('#joinR').value=S.explode*100;applyExplode()})};
+const views=[['Front',{theta:0,phi:Math.PI/2}],['Side',{theta:Math.PI/2,phi:Math.PI/2}],['Top',{theta:0,phi:.04}],['3D',{theta:.62,phi:1.12}]];
+views.forEach(([n,v])=>{const b=el('button',{},n);b.onclick=()=>camTo({...v,dist:fitDist()});$('#views').append(b)});
+{const b=el('button',{'aria-pressed':'false',id:'spinBtn',html:ic('rot')+'<span>Spin</span>'});b.onclick=()=>{S.spin=!S.spin;b.setAttribute('aria-pressed',S.spin);syncView()};$('#views').append(b)}
+HK.rebuilt=()=>{const multi=cur.res.parts.filter(p=>!p.ghost).length>1||cur.res.parts.some(p=>p.ghost);$('#join').hidden=!multi||cur.pr.lab;
+  if(S.tab==='colour')renderColour();updateTitle()};
+
+/* ---- tabs ---- */
+const TABS=[['solids','Solids','solid'],['size','Size','ruler'],['colour','Colour','palette'],['math','Formulas','calc'],['view','View','view']];
+TABS.forEach(([id,name,icn])=>{const b=el('button',{role:'tab',id:'tab-'+id,'aria-selected':id===S.tab,html:ic(icn)+'<span>'+name+'</span>'});b.onclick=()=>setTab(id);$('#tabs').append(b)});
+function setTab(id){S.tab=id;$$('#tabs button').forEach(b=>b.setAttribute('aria-selected',b.id==='tab-'+id));body.scrollTop=0;renderTab()}
+function renderTab(){({solids:renderSolids,size:renderSize,colour:renderColour,math:renderMath,view:renderView})[S.tab]()}
+
+function setPreset(id){
+  S.preset=id;S.selected=null;S.hover=null;S.explode=0;$('#joinR').value=0;S.quiz=false;document.body.classList.remove('quiz');
+  if(id==='lab'){LAB.c=1;LAB.m=0;LAB.y=0}
+  clampParams(PR(id),S.params[id]);rebuild({refit:true});
+  const keep=S.tab==='solids'?'solids':S.tab;renderTab();
+  if(window.innerWidth<=900&&S.tab==='solids'){/* stay */}
+}
+function renderSolids(){
+  body.innerHTML='';
+  [...new Set(PRESETS.map(p=>p.g))].forEach(g=>{
+    body.append(el('div',{class:'grp'},g));const cards=el('div',{class:'cards'});
+    PRESETS.filter(p=>p.g===g).forEach(p=>{const b=el('button',{class:'pcard','aria-pressed':p.id===S.preset,html:(THUMBS[p.id]?`<img alt="" src="${THUMBS[p.id]}">`:'<div class="ph"></div>')+`<span>${p.name}</span>`});b.onclick=()=>setPreset(p.id);cards.append(b)});
+    body.append(cards)});
+  body.append(el('p',{class:'note'},'Tap a solid to load it. Then use Size, Colour and Formulas. Joined solids can be pulled apart with the Join / Separate slider on the board.'));
+}
+
+/* ---- size ---- */
+function bounds(p,P){return[typeof p.min==='function'?p.min(P):p.min,typeof p.max==='function'?p.max(P):p.max]}
+function clampParams(pr,P){for(let pass=0;pass<3;pass++)pr.params.forEach(p=>{if(p.bool)return;const[a,b]=bounds(p,P);P[p.k]=+clamp(P[p.k],a,Math.max(a,b)).toFixed(2)})}
+let rbPending=false;function scheduleRebuild(){if(rbPending)return;rbPending=true;requestAnimationFrame(()=>{rbPending=false;rebuild();if(S.tab==='math')renderMath()})}
+function setParam(k,v){const pr=PR(S.preset),P=S.params[S.preset];if(!isFinite(v))return;P[k]=v;clampParams(pr,P);syncSize();scheduleRebuild()}
+function syncSize(){const pr=PR(S.preset),P=S.params[S.preset];pr.params.forEach(p=>{const i=sizeInputs[p.k];if(!i||p.bool)return;const[a,b]=bounds(p,P);i.rng.min=a;i.rng.max=Math.max(a,b);i.rng.value=P[p.k];i.num.value=P[p.k]})}
+function renderSize(){
+  const pr=PR(S.preset),P=S.params[S.preset];body.innerHTML='';for(const k in sizeInputs)delete sizeInputs[k];
+  body.append(el('div',{class:'grp'},pr.name));
+  if(pr.lab){
+    const g=el('div',{class:'bigbtns'});
+    [['Fill the cone',()=>labFill('c')],['Fill the hemisphere',()=>labFill('m')],['Fill the cylinder',()=>labFill('y')],['Empty everything',labEmpty],
+     ['Cone → Hemisphere',()=>labPour('c','m')],['Cone → Cylinder',()=>labPour('c','y')],['Hemisphere → Cone',()=>labPour('m','c')],['Hemisphere → Cylinder',()=>labPour('m','y')],['Cylinder → Cone',()=>labPour('y','c')],['Cylinder → Hemisphere',()=>labPour('y','m')]]
+      .forEach(([t,f],i)=>g.append(el('button',{class:'btn'+(i<3?' pri':''),onclick:f},t)));
+    body.append(g,el('div',{class:'eqc',id:'labread'}));HK.labTick();
+  }
+  pr.params.forEach(p=>{
+    if(p.bool){const b=el('button',{class:'tgl','aria-pressed':!!P[p.k],html:`<span>${p.label}</span><i></i>`});b.onclick=()=>{P[p.k]=!P[p.k];b.setAttribute('aria-pressed',P[p.k]);rebuild();if(S.tab==='math')renderMath()};body.append(b);return}
+    const num=el('input',{type:'number',step:.1,inputmode:'decimal','aria-label':p.label}),rng=el('input',{type:'range',step:p.step,'aria-label':p.label});
+    const bump=d=>setParam(p.k,+(P[p.k]+d).toFixed(2));
+    num.onchange=()=>setParam(p.k,parseFloat(num.value));rng.oninput=()=>setParam(p.k,parseFloat(rng.value));
+    const top=el('div',{class:'top'},el('div',{html:`<b>${symFor(pr,p)}</b><span class="nm">${p.label}</span>`}),
+      el('div',{class:'step'},el('button',{onclick:()=>bump(-p.step),'aria-label':'decrease'},'−'),num,el('button',{onclick:()=>bump(p.step),'aria-label':'increase'},'+'),el('span',{class:'u'},S.unit)));
+    body.append(el('div',{class:'prm'},top,rng));sizeInputs[p.k]={num,rng};
+  });
+  syncSize();
+  body.append(el('p',{class:'note'},'Drag a slider, tap + / −, or type an exact value. Everything on the board and in the formulas follows instantly.'));
+}
+HK.labTick=()=>{const r=$('#labread');if(r)r.innerHTML=`<div class="lbl">Liquid in each vessel (1 unit = one full cone)</div><div class="ln">Cone <b>${LAB.c.toFixed(2)}</b> of 1 · Hemisphere <b>${LAB.m.toFixed(2)}</b> of 2 · Cylinder <b>${LAB.y.toFixed(2)}</b> of 3</div>`};
+
+/* ---- colour ---- */
+const PAL=['#ef4444','#f97316','#f59e0b','#eab308','#84cc16','#22c55e','#14b8a6','#06b6d4','#3b82f6','#6366f1','#8b5cf6','#d946ef','#ec4899','#ffffff','#94a3b8','#1e293b'];
+const THEMES=[['#f97316','#3b82f6','#22c55e','#ec4899','#eab308'],['#0ea5e9','#6366f1','#14b8a6','#f43f5e','#a3e635'],['#94a3b8','#e2e8f0','#64748b','#cbd5e1','#475569'],['#f43f5e','#fb923c','#facc15','#a3e635','#2dd4bf']];
+const colorOf=s=>(S.colors[S.preset]||{})[s.id]||s.color;
+function paint(ids,color){S.colors[S.preset]=S.colors[S.preset]||{};ids.forEach(id=>{S.colors[S.preset][id]=color;(cur.ctx.mats[id]||[]).forEach(m=>m.color.set(color))});
+  $$('.lrow',body).forEach(r=>{if(ids.includes(r.dataset.id))$('.sw',r).style.background=color})}
+function applyColor(c){const ids=S.paintAll?cur.res.surfaces.map(s=>s.id):(S.selected?[S.selected]:[]);if(!ids.length){toast('Tap a surface on the solid or in the list first');return}paint(ids,c)}
+function renderColour(){
+  if(!cur)return;body.innerHTML='';
+  body.append(el('div',{class:'grp'},'Surfaces of this solid'),el('div',{class:'legend-note'},'Tap a surface here or on the solid, then choose a colour.'));
+  const lg=el('div',{class:'legend'});
+  cur.res.surfaces.forEach(s=>{
+    const b=el('button',{class:'lrow','data-id':s.id,'aria-pressed':S.selected===s.id,html:`<span class="sw" style="background:${colorOf(s)}"></span><span class="tx">${s.label}</span>${s.noTag?'':(s.counted?'<span class="tag y">in TSA</span>':'<span class="tag n">not in TSA</span>')}`});
+    b.onclick=()=>HK.select(S.selected===s.id?null:s.id);
+    b.onpointerenter=()=>{S.hover=s.id};b.onpointerleave=()=>{S.hover=null};lg.append(b)});
+  body.append(lg);
+  body.append(el('div',{class:'grp'},'Colour'));
+  const pal=el('div',{class:'pal'});PAL.forEach(c=>{const b=el('button',{style:`background:${c}`,'aria-label':'colour '+c});b.onclick=()=>applyColor(c);pal.append(b)});body.append(pal);
+  const ci=el('input',{type:'color',value:'#3b82f6','aria-label':'Custom colour'});ci.oninput=()=>applyColor(ci.value);
+  const all=el('button',{class:'tgl','aria-pressed':S.paintAll,html:'<span>Paint every surface at once</span><i></i>'});all.onclick=()=>{S.paintAll=!S.paintAll;all.setAttribute('aria-pressed',S.paintAll)};
+  body.append(el('div',{class:'row2'},el('span',{class:'hlabel'},'Custom'),ci),el('div',{style:'height:10px'}),all);
+  body.append(el('div',{class:'bigbtns'},
+    el('button',{class:'btn',onclick:()=>{const th=pick(THEMES);let i=0;S.colors[S.preset]={};cur.res.surfaces.forEach(s=>{if(!s.counted&&s.joint)return;S.colors[S.preset][s.id]=th[i++%th.length]});rebuild();},html:'Surprise me'}),
+    el('button',{class:'btn',onclick:()=>{delete S.colors[S.preset];rebuild()},html:ic('rot')+' Reset colours'})));
+  body.append(el('div',{class:'grp'},'Board background'));
+  const bg=el('div',{class:'row2'});Object.entries(BGS).forEach(([k,[n]])=>{const b=el('button',{class:'btn sm','aria-pressed':S.stageBg===k,style:S.stageBg===k?'border-color:var(--accent);background:var(--accent-soft)':''},n);b.onclick=()=>{S.stageBg=k;store.set('sl.bg',k);applyStageBg();renderColour()};bg.append(b)});
+  body.append(bg);
+}
+HK.select=id=>{S.selected=id;const s=id&&cur.res.surfaces.find(x=>x.id===id);
+  if(s)toast(s.label+(s.noTag?'':(s.counted?'  ·  counted in the total surface area':'  ·  hidden when the solids are joined')));
+  if(S.tab==='colour')renderColour()};
+
+/* ---- formulas ---- */
+function genericRand(pr){const r={};pr.params.forEach(p=>{if(p.bool)return;r[p.k]=(p.k==='r'||p.k==='R')?pick(RAD):p.k==='a'?pick([4,5,6,7,8,10]):pick(HGT)});return r}
+function challenge(){const pr=PR(S.preset),P=S.params[S.preset];Object.assign(P,pr.rand?pr.rand():genericRand(pr));clampParams(pr,P);S.quiz=true;document.body.classList.add('quiz');rebuild();syncSize();renderMath()}
+function rowHTML(r,X){
+  if(r.kind==='note')return`<div class="note" style="font-family:var(--font)">${r.label}</div>`;
+  const u=r.kind==='area'?`${X.u}<sup>2</sup>`:r.kind==='vol'?`${X.u}<sup>3</sup>`:X.u,pre=r.sym.startsWith(SY.l+' =')?'':'= ';
+  return`<div class="eqc ${r.tot?'tot':''} ${r.kind==='len'?'len':''}"><div class="lbl">${r.label}</div><div class="ln">${pre}${r.sym}</div>${r.sub?`<div class="ln s">= ${r.sub}</div>`:''}<div class="ans"${S.quiz?' data-hide="1"':''}>= ${fmt(r.val)} ${u}</div></div>`}
+function renderMath(){
+  const pr=PR(S.preset),P=S.params[S.preset],X={PI:PIM[S.pi].v,p:S.pi==='22/7'?fr(22,7):'π',f:fmt,u:S.unit};
+  const keepScroll=body.scrollTop;
+  let h=`<div class="story"><b>Problem.</b> ${pr.story(P,fmt)}</div><div class="idea"><b>Key idea.</b> ${pr.idea}</div>`;
+  pr.calc(P,X).forEach(s=>{h+=`<div class="sec">${s.title}</div>`+s.rows.map(r=>rowHTML(r,X)).join('')});
+  body.innerHTML=`<div class="bigbtns"><button class="btn pri" id="chBtn">Challenge me</button><button class="btn" id="qBtn">${S.quiz?'Show all answers':'Hide answers'}</button></div>`+h+`<p class="note">π = ${S.pi==='π'?'3.14159…':S.pi}. Change it at the top of the page.</p>`;
+  $('#chBtn').onclick=challenge;
+  $('#qBtn').onclick=()=>{S.quiz=!S.quiz;document.body.classList.toggle('quiz',S.quiz);renderMath()};
+  $$('.ans[data-hide]',body).forEach(a=>a.onclick=()=>a.removeAttribute('data-hide'));
+  body.scrollTop=keepScroll;
+}
+
+/* ---- view ---- */
+function tgl(label,get,set){const b=el('button',{class:'tgl','aria-pressed':!!get(),html:`<span>${label}</span><i></i>`});b.onclick=()=>{set(!get());b.setAttribute('aria-pressed',!!get())};return b}
+function syncView(){$('#spinBtn').setAttribute('aria-pressed',S.spin);if(S.tab==='view')renderView()}
+function renderView(){
+  body.innerHTML='';body.append(el('div',{class:'grp'},'Show on the solid'));
+  body.append(
+    tgl('Dimension lines (r, h, l)',()=>S.dims,v=>{S.dims=v;rebuild()}),
+    tgl('Show values on dimensions',()=>S.vals,v=>{S.vals=v;rebuild()}),
+    tgl('Edge outlines',()=>S.outline,v=>{S.outline=v;rebuild()}),
+    tgl('Wire-frame',()=>S.wire,v=>{S.wire=v;styleAll()}),
+    tgl('Auto-spin',()=>S.spin,v=>{S.spin=v;$('#spinBtn').setAttribute('aria-pressed',v)}));
+  const op=el('input',{type:'range',min:10,max:100,value:S.opacity*100,'aria-label':'Solidity'});op.oninput=()=>{S.opacity=op.value/100;styleAll()};
+  body.append(el('div',{class:'sl'},el('div',{class:'top'},el('span',{},'See-through'),el('span',{},'solid')),op));
+  body.append(el('div',{class:'grp'},'Cross-section (cut)'));
+  body.append(tgl('Cut the solid',()=>S.clip.on,v=>{S.clip.on=v;applyClip()}));
+  const ax=el('div',{class:'seg',style:'margin-bottom:8px'});['x','y','z'].forEach(a=>{const b=el('button',{'aria-pressed':S.clip.axis===a},a==='y'?'Horizontal cut':a==='x'?'Left–right cut':'Front–back cut');b.style.fontSize='.8rem';b.onclick=()=>{S.clip.axis=a;$$('button',ax).forEach(x=>x.setAttribute('aria-pressed',x===b));applyClip()};ax.append(b)});
+  const cp=el('input',{type:'range',min:-100,max:100,value:S.clip.pos,'aria-label':'Cut position'});cp.oninput=()=>{S.clip.pos=+cp.value;applyClip()};
+  body.append(ax,el('div',{class:'sl'},el('div',{class:'top'},el('span',{},'Cut position')),cp),tgl('Keep the other side',()=>!!S.clip.flip,v=>{S.clip.flip=v;applyClip()}));
+  body.append(el('p',{class:'note'},'Turn on the cut and slide it to look inside. In joined solids you will see the red joint faces that are not part of the surface area.'));
+}
+
+/* ---- init ---- */
+HK.resized=()=>{};
+setTimeout(()=>{try{makeThumbs(t=>{THUMBS=t;if(S.tab==='solids')renderSolids()})}catch(e){console.warn('thumbs',e)}},60);
+requestAnimationFrame(frame);
+rebuild({refit:true});resize();updateTitle();renderTab();
+
+/* ============ NOTES / INK ============ */
+const inkCv=$('#ink'),ictx=inkCv.getContext('2d'),lasCv=$('#laser'),lctx=lasCv.getContext('2d');
+let SW=0,SH=0,DPR=1;
+const newPage=()=>({strokes:[],undo:[],redo:[],bg:'none',img:null,imgEl:null});
+const ink={tool:'hand',color:'#e11d48',w:4,pages:[newPage()],cur:0,show:true,cs:null,pid:null,txt:null,trail:[],down:false};
+{const sv=store.get('sl.notes',null);if(sv&&sv.pages&&sv.pages.length){ink.pages=sv.pages.map(p=>{const q=newPage();q.strokes=p.strokes||[];q.bg=p.bg||'none';q.img=p.img||null;return q});ink.cur=clamp(sv.cur||0,0,ink.pages.length-1)}}
+const pg=()=>ink.pages[ink.cur];
+function loadImg(p){if(p.img&&!p.imgEl){const i=new Image();i.onload=()=>{p.imgEl=i;redraw()};i.src=p.img}}
+ink.pages.forEach(loadImg);
+let saveT;function persist(){clearTimeout(saveT);saveT=setTimeout(()=>store.set('sl.notes',{cur:ink.cur,pages:ink.pages.map(p=>({strokes:p.strokes,bg:p.bg,img:p.img}))}),500)}
+
+HK.resized=(w,h)=>{SW=w;SH=h;DPR=Math.min(window.devicePixelRatio||1,2);[inkCv,lasCv].forEach(c=>{c.width=Math.round(w*DPR);c.height=Math.round(h*DPR)});redraw()};
+
+/* ---------- drawing ---------- */
+const FLAT={white:'#ffffff',grid:'#ffffff',dots:'#ffffff',black:'#0e1220',board:'#1f4d3a'};
+function drawBg(c,p){
+  if(p.bg==='none')return;
+  c.fillStyle=FLAT[p.bg];c.fillRect(0,0,SW,SH);
+  const dark=p.bg==='black'||p.bg==='board';c.strokeStyle=dark?'rgba(255,255,255,.13)':'rgba(30,60,120,.17)';c.fillStyle=c.strokeStyle;c.lineWidth=1;
+  if(p.bg==='grid'){c.beginPath();for(let x=0;x<SW;x+=40){c.moveTo(x+.5,0);c.lineTo(x+.5,SH)}for(let y=0;y<SH;y+=40){c.moveTo(0,y+.5);c.lineTo(SW,y+.5)}c.stroke()}
+  if(p.bg==='dots'){for(let x=20;x<SW;x+=40)for(let y=20;y<SH;y+=40){c.beginPath();c.arc(x,y,1.8,0,PI2);c.fill()}}
+  if(p.imgEl){const iw=p.imgEl.width,ih=p.imgEl.height,s=Math.min(SW*.96/iw,SH*.96/ih);c.drawImage(p.imgEl,(SW-iw*s)/2,(SH-ih*s)/2,iw*s,ih*s)}
+}
+function drawStroke(c,s){
+  const W=SW,H=SH;c.save();c.lineCap='round';c.lineJoin='round';c.strokeStyle=s.color;c.fillStyle=s.color;c.lineWidth=s.w;
+  if(s.t==='pen'||s.t==='hl'){
+    if(s.t==='hl'){c.globalAlpha=.34;c.lineWidth=s.w*3.2+8;c.lineCap='butt'}
+    const p=s.pts;
+    if(p.length===1){c.beginPath();c.arc(p[0][0]*W,p[0][1]*H,c.lineWidth/2,0,PI2);c.fill()}
+    else{c.beginPath();c.moveTo(p[0][0]*W,p[0][1]*H);for(let i=1;i<p.length-1;i++){c.quadraticCurveTo(p[i][0]*W,p[i][1]*H,(p[i][0]+p[i+1][0])/2*W,(p[i][1]+p[i+1][1])/2*H)}const l=p[p.length-1];c.lineTo(l[0]*W,l[1]*H);c.stroke()}
+  }else if(s.t==='line'||s.t==='arrow'){
+    const ax=s.a[0]*W,ay=s.a[1]*H,bx=s.b[0]*W,by=s.b[1]*H;c.beginPath();c.moveTo(ax,ay);c.lineTo(bx,by);c.stroke();
+    if(s.t==='arrow'){const an=Math.atan2(by-ay,bx-ax),hl=12+s.w*2.4;c.beginPath();c.moveTo(bx-hl*Math.cos(an-.45),by-hl*Math.sin(an-.45));c.lineTo(bx,by);c.lineTo(bx-hl*Math.cos(an+.45),by-hl*Math.sin(an+.45));c.stroke()}
+  }else if(s.t==='rect'){c.strokeRect(s.a[0]*W,s.a[1]*H,(s.b[0]-s.a[0])*W,(s.b[1]-s.a[1])*H)}
+  else if(s.t==='ellipse'){const cx=(s.a[0]+s.b[0])/2*W,cy=(s.a[1]+s.b[1])/2*H,rx=Math.abs(s.b[0]-s.a[0])*W/2,ry=Math.abs(s.b[1]-s.a[1])*H/2;c.beginPath();c.ellipse(cx,cy,Math.max(rx,.5),Math.max(ry,.5),0,0,PI2);c.stroke()}
+  else if(s.t==='text'){c.font=`600 ${s.size}px Outfit,system-ui,sans-serif`;c.textBaseline='top';c.fillText(s.text,s.x*W+8,s.y*H+4)}
+  c.restore();
+}
+let rdPending=false;function redraw(){if(rdPending)return;rdPending=true;requestAnimationFrame(()=>{rdPending=false;
+  ictx.setTransform(DPR,0,0,DPR,0,0);ictx.clearRect(0,0,SW,SH);const p=pg();drawBg(ictx,p);p.strokes.forEach(s=>drawStroke(ictx,s));if(ink.cs)drawStroke(ictx,ink.cs)})}
+
+/* ---------- toolbar ---------- */
+const T=$('#tools');
+const tb=(icn,label,fn,extra={})=>{const b=el('button',{class:'tb','aria-label':label,title:label,html:ic(icn),...extra});b.onclick=fn;return b};
+const sep=()=>el('span',{class:'sep'});
+const toolBtns={};
+const TOOLS=[['hand','hand','Interact: rotate and zoom the solid'],['pen','pen','Pen'],['hl','hl','Highlighter'],['eraser','eraser','Eraser (removes whole strokes)'],['laser','laser','Laser pointer'],['text','text','Type text']];
+const SHAPES=[['line','line','Line'],['arrow','arrow','Arrow'],['rect','rect','Rectangle'],['ellipse','ellipse','Ellipse']];
+const grab=el('div',{class:'grab',title:'Drag to move the toolbar',html:ic('grip')});
+const row1=el('div',{class:'tr'}),row2=el('div',{class:'tr'});
+row1.append(grab);
+TOOLS.forEach(([id,icn,l])=>{const b=tb(icn,l,()=>setTool(id));toolBtns[id]=b;row1.append(b)});
+/* shapes menu */
+function placePop(pp,btn){if(pp.hidden)return;const tr=T.getBoundingClientRect(),br=btn.getBoundingClientRect();pp.style.left=Math.max(0,Math.min(br.left-tr.left,tr.width-pp.offsetWidth))+'px'}
+const shapeBtn=tb('shapes','Shapes',()=>{pop.hidden=!pop.hidden;bgPop.hidden=true;placePop(pop,shapeBtn)});toolBtns.shapes=shapeBtn;
+const pop=el('div',{class:'chip pop',hidden:true});
+SHAPES.forEach(([id,icn,l])=>{const b=el('button',{html:ic(icn)+' '+l,'aria-pressed':false});b.style.display='inline-flex';b.style.gap='6px';b.style.alignItems='center';b.onclick=()=>{setTool(id);pop.hidden=true};toolBtns[id]=b;pop.append(b)});
+row1.append(shapeBtn,sep());
+const COLS=['#e11d48','#2563eb','#16a34a','#f59e0b','#7c3aed','#0f172a','#ffffff'];
+COLS.forEach(c=>{const b=el('button',{class:'col','aria-label':'Ink colour '+c,style:`background:${c}`,'aria-pressed':c===ink.color});b.onclick=()=>{ink.color=c;$$('.col',T).forEach(x=>x.setAttribute('aria-pressed',x===b));if(['hand','eraser','laser'].includes(ink.tool))setTool('pen')};row1.append(b)});
+row1.append(sep());
+[3,6,12].forEach(w=>{const b=el('button',{class:'wd','aria-label':'Pen width '+w,'aria-pressed':w===ink.w});b.append(el('i',{style:`width:${w+4}px;height:${w+4}px`}));b.onclick=()=>{ink.w=w;$$('.wd',T).forEach(x=>x.setAttribute('aria-pressed',x===b))};row1.append(b)});
+/* row 2 */
+const undoB=tb('undo','Undo (Ctrl+Z)',()=>undo()),redoB=tb('redo','Redo (Ctrl+Y)',()=>redo());
+const pgno=el('span',{id:'pgno'});
+const bgBtn=tb('page','Page background',()=>{bgPop.hidden=!bgPop.hidden;pop.hidden=true;placePop(bgPop,bgBtn)});
+const bgPop=el('div',{class:'chip pop',hidden:true});
+[['none','Live 3D view'],['white','White'],['grid','Grid'],['dots','Dots'],['black','Blackboard'],['board','Green board']].forEach(([k,n])=>{const b=el('button',{'aria-pressed':false},n);b.dataset.bg=k;b.onclick=()=>{pg().bg=k;bgPop.hidden=true;syncBg();redraw();persist()};bgPop.append(b)});
+const eyeB=tb('eye','Show or hide the ink',()=>{ink.show=!ink.show;inkCv.style.visibility=ink.show?'visible':'hidden';eyeB.innerHTML=ic(ink.show?'eye':'eyeoff');if(!ink.show)setTool('hand')});
+row2.append(undoB,redoB,tb('trash','Clear this page',()=>clearPage()),sep(),tb('prev','Previous page',()=>gotoPage(ink.cur-1)),pgno,tb('next','Next page',()=>gotoPage(ink.cur+1)),tb('plus','New page',()=>{commitText();ink.pages.push(newPage());gotoPage(ink.pages.length-1)}),sep(),bgBtn,
+  tb('camera','Pin the current 3D view onto this page',()=>pinView()),tb('save','Save this page as a picture',()=>savePNG()),eyeB);
+T.append(row1,row2,pop,bgPop);
+
+function syncBg(){$$('button',bgPop).forEach(b=>b.setAttribute('aria-pressed',b.dataset.bg===pg().bg))}
+function updatePg(){pgno.textContent=`${ink.cur+1} / ${ink.pages.length}`;syncBg();undoB.disabled=!pg().undo.length;redoB.disabled=!pg().redo.length}
+function setTool(t){
+  commitText();ink.tool=t;pop.hidden=true;bgPop.hidden=true;
+  document.body.classList.toggle('drawing',t!=='hand');
+  [...document.body.classList].filter(c=>c.startsWith('t-')).forEach(c=>document.body.classList.remove(c));document.body.classList.add('t-'+t);
+  Object.entries(toolBtns).forEach(([id,b])=>b.setAttribute('aria-pressed',id===t));
+  const isShape=SHAPES.some(s=>s[0]===t);shapeBtn.setAttribute('aria-pressed',isShape);
+  if(isShape)shapeBtn.innerHTML=ic(SHAPES.find(s=>s[0]===t)[1]);
+  if(t!=='hand'&&!ink.show){ink.show=true;inkCv.style.visibility='visible';eyeB.innerHTML=ic('eye')}
+}
+function gotoPage(i){if(i<0||i>=ink.pages.length)return;commitText();ink.cur=i;loadImg(pg());updatePg();redraw();persist()}
+function act(a){const p=pg();p.undo.push(a);p.redo=[];updatePg();persist()}
+function undo(){const p=pg(),a=p.undo.pop();if(!a)return;
+  if(a.t==='add'){const i=p.strokes.indexOf(a.s);if(i>=0)p.strokes.splice(i,1)}
+  else if(a.t==='del'){p.strokes.splice(Math.min(a.i,p.strokes.length),0,a.s)}
+  else if(a.t==='clear'){p.strokes=a.list.slice()}
+  p.redo.push(a);updatePg();redraw();persist()}
+function redo(){const p=pg(),a=p.redo.pop();if(!a)return;
+  if(a.t==='add')p.strokes.push(a.s);else if(a.t==='del'){const i=p.strokes.indexOf(a.s);if(i>=0)p.strokes.splice(i,1)}else if(a.t==='clear')p.strokes=[];
+  p.undo.push(a);updatePg();redraw();persist()}
+function clearPage(){const p=pg();if(!p.strokes.length){toast('This page is already clear');return}const list=p.strokes.slice();p.strokes=[];act({t:'clear',list});redraw();toast('Page cleared. Tap Undo to bring it back.')}
+
+/* snapshot + save */
+const FLATBG={auto:()=>isDark()?'#12193a':'#eef2fb',white:()=>'#ffffff',cream:()=>'#f6f0e0',sky:()=>'#d3e6f8',board:()=>'#214f3c',black:()=>'#0b0d14'};
+function pinView(){
+  renderer.render(scene,camera);const c=document.createElement('canvas');c.width=cv.width;c.height=cv.height;const x=c.getContext('2d');
+  x.fillStyle=(FLATBG[S.stageBg]||FLATBG.auto)();x.fillRect(0,0,c.width,c.height);x.drawImage(cv,0,0);
+  const p=pg();p.img=c.toDataURL('image/jpeg',.82);p.imgEl=null;if(p.bg==='none')p.bg='white';loadImg(p);syncBg();redraw();persist();toast('3D view pinned to this page. Write around it!');
+}
+async function savePNG(){
+  const out=document.createElement('canvas');out.width=inkCv.width;out.height=inkCv.height;const c=out.getContext('2d');
+  if(pg().bg==='none'){c.fillStyle=(FLATBG[S.stageBg]||FLATBG.auto)();c.fillRect(0,0,out.width,out.height);renderer.render(scene,camera);c.drawImage(cv,0,0,out.width,out.height)}
+  c.drawImage(inkCv,0,0);
+  const blob=await new Promise(r=>out.toBlob(r,'image/png')),name=`solids-lab-page-${ink.cur+1}.png`;
+  try{const dl=window.claude&&window.claude.use?await window.claude.use('downloads'):null;
+    if(dl){await dl.save({filename:name,data:blob});toast('Saved '+name);return}}catch(e){if(e&&e.code==='declined')return}
+  try{const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.append(a);a.click();a.remove();toast('Saved '+name)}catch(e){toast('Saving is not available here')}
+}
+
+/* ---------- hit testing for the eraser ---------- */
+function segD(px,py,ax,ay,bx,by){const dx=bx-ax,dy=by-ay,l=dx*dx+dy*dy;let t=l?((px-ax)*dx+(py-ay)*dy)/l:0;t=Math.max(0,Math.min(1,t));return Math.hypot(px-(ax+t*dx),py-(ay+t*dy))}
+function hits(s,x,y,rad){const W=SW,H=SH;
+  if(s.t==='pen'||s.t==='hl'){const r=rad+(s.t==='hl'?s.w*1.6+4:s.w/2),p=s.pts;if(p.length===1)return Math.hypot(p[0][0]*W-x,p[0][1]*H-y)<r;for(let i=1;i<p.length;i++)if(segD(x,y,p[i-1][0]*W,p[i-1][1]*H,p[i][0]*W,p[i][1]*H)<r)return true;return false}
+  if(s.t==='line'||s.t==='arrow')return segD(x,y,s.a[0]*W,s.a[1]*H,s.b[0]*W,s.b[1]*H)<rad+s.w/2;
+  if(s.t==='rect'){const x1=s.a[0]*W,y1=s.a[1]*H,x2=s.b[0]*W,y2=s.b[1]*H;return[[x1,y1,x2,y1],[x2,y1,x2,y2],[x2,y2,x1,y2],[x1,y2,x1,y1]].some(e=>segD(x,y,...e)<rad+s.w/2)}
+  if(s.t==='ellipse'){const cx=(s.a[0]+s.b[0])/2*W,cy=(s.a[1]+s.b[1])/2*H,rx=Math.max(1,Math.abs(s.b[0]-s.a[0])*W/2),ry=Math.max(1,Math.abs(s.b[1]-s.a[1])*H/2);return Math.abs(Math.hypot((x-cx)/rx,(y-cy)/ry)-1)*Math.min(rx,ry)<rad+s.w/2}
+  if(s.t==='text'){ictx.font=`600 ${s.size}px Outfit,system-ui,sans-serif`;const w=ictx.measureText(s.text).width+16;return x>s.x*W-rad&&x<s.x*W+w+rad&&y>s.y*H-rad&&y<s.y*H+s.size*1.3+rad}
+  return false}
+function eraseAt(x,y){const p=pg(),rad=12+ink.w*1.5;let any=false;
+  for(let i=p.strokes.length-1;i>=0;i--){if(hits(p.strokes[i],x,y,rad)){const s=p.strokes.splice(i,1)[0];p.undo.push({t:'del',s,i});p.redo=[];any=true}}
+  if(any){updatePg();redraw();persist()}}
+
+/* ---------- text ---------- */
+function commitText(){const t=ink.txt;if(!t)return;ink.txt=null;const v=t.inp.value.trim();t.inp.remove();
+  if(v){const s={t:'text',x:t.p[0],y:t.p[1],text:v,color:ink.color,size:t.size,w:1};pg().strokes.push(s);act({t:'add',s});redraw()}}
+function openText(p){commitText();const size=16+ink.w*3,inp=el('input',{id:'txtin',type:'text','aria-label':'Type your note, then press Enter'});
+  inp.style.left=(p[0]*SW-2)+'px';inp.style.top=(p[1]*SH-3)+'px';inp.style.fontSize=size+'px';inp.style.color=ink.color;inp.style.lineHeight='1.25';
+  stage.append(inp);ink.txt={inp,p,size};setTimeout(()=>inp.focus(),0);
+  inp.onkeydown=e=>{e.stopPropagation();if(e.key==='Enter')commitText();else if(e.key==='Escape'){ink.txt=null;inp.remove()}};
+  inp.onblur=()=>commitText()}
+
+/* ---------- laser ---------- */
+function laserLoop(){const now=performance.now();lctx.setTransform(DPR,0,0,DPR,0,0);lctx.clearRect(0,0,SW,SH);
+  ink.trail=ink.trail.filter(p=>now-p.t<750);const tr=ink.trail;
+  for(let i=1;i<tr.length;i++){const a=1-(now-tr[i].t)/750;lctx.strokeStyle=`rgba(255,40,70,${Math.max(0,a)*.85})`;lctx.lineWidth=3+7*a;lctx.lineCap='round';lctx.beginPath();lctx.moveTo(tr[i-1].x,tr[i-1].y);lctx.lineTo(tr[i].x,tr[i].y);lctx.stroke()}
+  if(ink.down&&tr.length){const l=tr[tr.length-1],g=lctx.createRadialGradient(l.x,l.y,2,l.x,l.y,22);g.addColorStop(0,'rgba(255,60,80,1)');g.addColorStop(.35,'rgba(255,60,80,.55)');g.addColorStop(1,'rgba(255,60,80,0)');lctx.fillStyle=g;lctx.beginPath();lctx.arc(l.x,l.y,22,0,PI2);lctx.fill()}
+  if(tr.length||ink.down)requestAnimationFrame(laserLoop);else lctx.clearRect(0,0,SW,SH)}
+
+/* ---------- pointer events ---------- */
+const ptN=e=>{const r=inkCv.getBoundingClientRect();return[(e.clientX-r.left)/r.width,(e.clientY-r.top)/r.height]};
+inkCv.addEventListener('pointerdown',e=>{
+  if(ink.pid!=null||ink.tool==='hand')return;ink.pid=e.pointerId;inkCv.setPointerCapture(e.pointerId);ink.down=true;pop.hidden=true;bgPop.hidden=true;
+  const p=ptN(e),t=ink.tool,col=ink.color;
+  if(t==='pen')ink.cs={t:'pen',pts:[p],color:col,w:ink.w};
+  else if(t==='hl')ink.cs={t:'hl',pts:[p],color:col,w:ink.w};
+  else if(SHAPES.some(s=>s[0]===t))ink.cs={t,a:p,b:p,color:col,w:ink.w};
+  else if(t==='eraser')eraseAt(p[0]*SW,p[1]*SH);
+  else if(t==='laser'){ink.trail.push({x:p[0]*SW,y:p[1]*SH,t:performance.now()});laserLoop()}
+  redraw();
+});
+inkCv.addEventListener('pointermove',e=>{
+  if(e.pointerId!==ink.pid)return;const p=ptN(e),t=ink.tool;
+  if(ink.cs){if(ink.cs.pts){const l=ink.cs.pts[ink.cs.pts.length-1];if(Math.hypot((p[0]-l[0])*SW,(p[1]-l[1])*SH)>1.5)ink.cs.pts.push(p)}else ink.cs.b=p;redraw()}
+  else if(t==='eraser')eraseAt(p[0]*SW,p[1]*SH);
+  else if(t==='laser')ink.trail.push({x:p[0]*SW,y:p[1]*SH,t:performance.now()});
+});
+const inkUp=e=>{
+  if(e.pointerId!==ink.pid)return;ink.pid=null;ink.down=false;const p=ptN(e);
+  if(ink.cs){const s=ink.cs;ink.cs=null;const tiny=!s.pts&&Math.hypot((s.b[0]-s.a[0])*SW,(s.b[1]-s.a[1])*SH)<4;if(!tiny){pg().strokes.push(s);act({t:'add',s})}redraw()}
+  else if(ink.tool==='text'&&e.type==='pointerup')openText(p);
+};
+inkCv.addEventListener('pointerup',inkUp);inkCv.addEventListener('pointercancel',inkUp);
+inkCv.addEventListener('contextmenu',e=>e.preventDefault());
+
+/* ---------- draggable toolbar ---------- */
+{let d=null;grab.addEventListener('pointerdown',e=>{const r=T.getBoundingClientRect(),s=stage.getBoundingClientRect();d={dx:e.clientX-r.left,dy:e.clientY-r.top,sx:s.left,sy:s.top};
+    T.style.transform='none';T.style.left=(r.left-s.left)+'px';T.style.top=(r.top-s.top)+'px';T.style.bottom='auto';grab.setPointerCapture(e.pointerId);e.preventDefault()});
+  grab.addEventListener('pointermove',e=>{if(!d)return;const w=T.offsetWidth,h=T.offsetHeight;
+    T.style.left=clamp(e.clientX-d.sx-d.dx,4,stage.clientWidth-w-4)+'px';T.style.top=clamp(e.clientY-d.sy-d.dy,4,stage.clientHeight-h-4)+'px'});
+  grab.addEventListener('pointerup',()=>{d=null});grab.addEventListener('pointercancel',()=>{d=null})}
+
+/* ---------- keyboard ---------- */
+document.addEventListener('keydown',e=>{
+  if(/^(INPUT|TEXTAREA|SELECT)$/.test((e.target.tagName||''))&&e.target.type!=='range')return;
+  const k=e.key.toLowerCase();
+  if((e.ctrlKey||e.metaKey)&&k==='z'){e.preventDefault();e.shiftKey?redo():undo();return}
+  if((e.ctrlKey||e.metaKey)&&k==='y'){e.preventDefault();redo();return}
+  if(e.ctrlKey||e.metaKey||e.altKey)return;
+  const m={v:'hand',p:'pen',h:'hl',e:'eraser',l:'laser',t:'text'}[k];if(m){setTool(m);return}
+  if(e.key==='ArrowRight')gotoPage(ink.cur+1);if(e.key==='ArrowLeft')gotoPage(ink.cur-1);
+});
+document.addEventListener('pointerdown',e=>{if(!e.target.closest('.pop')&&!e.target.closest('#tools')){pop.hidden=true;bgPop.hidden=true}});
+
+setTool('hand');updatePg();
+if(window.__SLTEST)window.__SL={cam,fitDist,S,LAB,PRESETS,ink,setPreset,setTab,rebuild,applyColor,HK,get cur(){return cur},labFill,labPour,setTool,undo,redo,challenge,clampParams};
+resize();
+let hintShown=false;
+setTimeout(()=>{const h=$('#toast');toast('Drag to rotate · pinch to zoom · tap a surface to select it');},900);
+})();
+
+
+</script>
+
+</body></html>
